@@ -20,6 +20,8 @@ Content-Type: application/json
 
 | Field | Type | Bắt buộc | Quy tắc |
 |---|---|---:|---|
+| `username` | string | Có | Từ 3 đến 50 ký tự; chỉ gồm chữ cái, số và dấu gạch dưới; được chuyển về chữ thường trước khi lưu |
+| `fullname` | string | Không | Tối đa 100 ký tự; chuỗi rỗng được lưu thành `null` |
 | `email` | string | Có | Đúng định dạng email, tối đa 255 ký tự; được loại bỏ khoảng trắng hai đầu và chuyển về chữ thường trước khi lưu |
 | `password` | string | Có | Từ 8 đến 72 ký tự; không tự động trim |
 
@@ -27,6 +29,8 @@ Ví dụ:
 
 ```json
 {
+  "username": "test_user",
+  "fullname": "Nguyễn Văn Test",
   "email": "test@example.com",
   "password": "12345678"
 }
@@ -38,6 +42,8 @@ Ví dụ:
 {
   "data": {
     "id": 1,
+    "username": "test_user",
+    "fullname": "Nguyễn Văn Test",
     "email": "test@example.com",
     "createdAt": "2026-10-09T08:00:00.000Z"
   }
@@ -70,6 +76,17 @@ Ví dụ email sai định dạng và mật khẩu quá ngắn:
   "error": {
     "code": "EMAIL_ALREADY_EXISTS",
     "message": "Email đã được đăng ký"
+  }
+}
+```
+
+#### Username đã tồn tại — `409 Conflict`
+
+```json
+{
+  "error": {
+    "code": "USERNAME_ALREADY_EXISTS",
+    "message": "Username đã được sử dụng"
   }
 }
 ```

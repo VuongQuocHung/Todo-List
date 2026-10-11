@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 import '../App.css';
 
 export const RegisterPage = () => {
+  const [username, setUsername] = useState('');
+  const [fullname, setFullname] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -12,6 +14,18 @@ export const RegisterPage = () => {
   const validateForm = () => {
     const nextErrors = {};
     const normalizedEmail = email.trim();
+
+    if (!username.trim()) {
+      nextErrors.username = 'Vui lòng nhập username';
+    } else if (username.trim().length < 3) {
+      nextErrors.username = 'Username phải có ít nhất 3 ký tự';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+      nextErrors.username = 'Username chỉ được chứa chữ cái, số và dấu gạch dưới';
+    }
+
+    if (fullname.trim().length > 100) {
+      nextErrors.fullname = 'Họ tên không được vượt quá 100 ký tự';
+    }
 
     if (!normalizedEmail) {
       nextErrors.email = 'Vui lòng nhập email';
@@ -54,6 +68,8 @@ export const RegisterPage = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          username: username.trim(),
+          fullname: fullname.trim() || undefined,
           email: email.trim(),
           password,
         }),
@@ -68,6 +84,8 @@ export const RegisterPage = () => {
       }
 
       toast.success('Đăng ký thành công');
+      setUsername('');
+      setFullname('');
       setEmail('');
       setPassword('');
       setConfirmPassword('');
@@ -83,6 +101,44 @@ export const RegisterPage = () => {
     <main className="register-page">
       <form className="register-card" onSubmit={handleSubmit} noValidate>
         <h1>Đăng ký</h1>
+
+        <div className="register-field">
+          <label htmlFor="username">Username</label>
+          <input
+            type="text"
+            name="username"
+            id="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="Username"
+            aria-invalid={Boolean(errors.username)}
+            aria-describedby={errors.username ? 'username-error' : undefined}
+          />
+          {errors.username && (
+            <p id="username-error" className="register-field-error">
+              {errors.username}
+            </p>
+          )}
+        </div>
+
+        <div className="register-field">
+          <label htmlFor="fullname">Họ tên (không bắt buộc)</label>
+          <input
+            type="text"
+            name="fullname"
+            id="fullname"
+            value={fullname}
+            onChange={(event) => setFullname(event.target.value)}
+            placeholder="Họ tên"
+            aria-invalid={Boolean(errors.fullname)}
+            aria-describedby={errors.fullname ? 'fullname-error' : undefined}
+          />
+          {errors.fullname && (
+            <p id="fullname-error" className="register-field-error">
+              {errors.fullname}
+            </p>
+          )}
+        </div>
 
         <div className="register-field">
           <label htmlFor="email">Email</label>

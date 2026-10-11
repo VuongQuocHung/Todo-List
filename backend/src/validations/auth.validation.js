@@ -2,6 +2,22 @@
 const { z } = require('zod');
 
 const registerSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, 'Username phải có ít nhất 3 ký tự')
+    .max(50, 'Username không được vượt quá 50 ký tự')
+    .regex(
+      /^[a-zA-Z0-9_]+$/,
+      'Username chỉ được chứa chữ cái, số và dấu gạch dưới'
+    ),
+
+  fullname: z
+    .string()
+    .trim()
+    .max(100, 'Họ tên không được vượt quá 100 ký tự')
+    .optional(),
+
   email: z
     .string()
     .trim()

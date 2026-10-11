@@ -11,6 +11,14 @@ const createEmailExistsError = () => {
   return error;
 };
 
+const createUsernameExistsError = () => {
+  const error = new Error('Username đã được sử dụng');
+  error.statusCode = 409;
+  error.code = 'USERNAME_ALREADY_EXISTS';
+
+  return error;
+};
+
 // Lỗi khi đăng nhập
 const createInvalidCredentialsError = () => {
   const error = new Error(
@@ -23,8 +31,24 @@ const createInvalidCredentialsError = () => {
   return error;
 };
 
-module.exports.registerUser = async ({ email, password }) => {
+module.exports.registerUser = async ({
+  username,
+  fullname,
+  email,
+  password,
+}) => {
+  const normalizedUsername = username.trim().toLowerCase();
+  const normalizedFullname = fullname?.trim() || null;
   const normalizedEmail = email.trim().toLowerCase();
+
+  const existingUsername = await userRepository.findUserByUsername(
+    normalizedUsername
+  );
+
+  if (existingUsername) {
+    throw createUsernameExistsError();
+  }
+
   const existingUser = await userRepository.findUserByEmail(
     normalizedEmail
   );
@@ -38,11 +62,17 @@ module.exports.registerUser = async ({ email, password }) => {
 
   try {
     return await userRepository.createUser(
+      normalizedUsername,
+      normalizedFullname,
       normalizedEmail,
       passwordHash
     );
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
+      if (error.message.includes('uq_users_username')) {
+        throw createUsernameExistsError();
+      }
+
       throw createEmailExistsError();
     }
 
@@ -80,6 +110,8 @@ module.exports.loginUser = async ({ email, password }) => {
     token,
     user: {
       id: existUser.id,
+      username: existUser.username,
+      fullname: existUser.fullname,
       email: existUser.email,
       createdAt: existUser.createdAt,
     },
