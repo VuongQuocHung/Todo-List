@@ -1,9 +1,12 @@
-import express from 'express';
-import pool from './configs/database.config.js';
+const express = require('express');
+const pool = require('./configs/database.config');
+const authRoutes = require('./routes/auth.route');
+const errorMiddleware = require('./middlewares/error.middleware');
 
 const app = express();
 
 app.use(express.json());
+app.use('/api/auth', authRoutes);
 
 app.get('/api/health', async (req, res, next) => {
   try {
@@ -17,4 +20,7 @@ app.get('/api/health', async (req, res, next) => {
   }
 });
 
-export default app;
+app.use(errorMiddleware.notFoundHandler);
+app.use(errorMiddleware.errorHandler);
+
+module.exports = app;

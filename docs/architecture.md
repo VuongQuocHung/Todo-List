@@ -4,6 +4,8 @@
 
 Backend Express sử dụng 3-layer architecture và tổ chức thư mục theo layer.
 
+Backend dùng CommonJS với `require` và `module.exports`. Frontend Vite dùng ES Modules theo cấu hình mặc định của Vite.
+
 ```text
 src/
 ├── routes/
