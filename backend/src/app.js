@@ -1,4 +1,6 @@
 const express = require('express');
+const cookieParser = require('cookie-parser');
+
 const pool = require('./configs/database.config');
 const authRoutes = require('./routes/auth.route');
 const errorMiddleware = require('./middlewares/error.middleware');
@@ -6,6 +8,8 @@ const errorMiddleware = require('./middlewares/error.middleware');
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
+
 app.use('/api/auth', authRoutes);
 
 app.get('/api/health', async (req, res, next) => {

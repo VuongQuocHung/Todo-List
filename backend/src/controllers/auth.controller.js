@@ -12,3 +12,24 @@ module.exports.registerPost = async (req, res, next) => {
   }
 };
 
+module.exports.loginPost = async (req, res, next) => {
+  try {
+    
+    const result = await authService.loginUser(req.body);
+
+    res.cookie('token', result.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
+    })
+
+    return res.status(200).json({
+      data: result.user,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+

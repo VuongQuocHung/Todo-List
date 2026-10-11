@@ -15,8 +15,36 @@ const registerSchema = z.object({
     .max(72, 'Mật khẩu không được vượt quá 72 ký tự'),
 });
 
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email không được để trống')
+    .email('Email không hợp lệ'),
+
+  password: z
+    .string()
+    .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
+});
+
 module.exports.registerPost = (req, res, next) => {
   const result = registerSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: result.error.issues[0].message,
+      },
+    });
+  }
+
+  req.body = result.data;
+  next();
+};
+
+module.exports.loginPost = (req, res, next) => {
+  const result = loginSchema.safeParse(req.body);
 
   if (!result.success) {
     return res.status(400).json({

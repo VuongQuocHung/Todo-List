@@ -12,7 +12,7 @@ module.exports.errorHandler = (error, req, res, next) => {
     return next(error);
   }
 
-  const statusCode = error.statusCode ?? error.status ?? 500;
+  const statusCode = error.statusCode ?? 500;
   const isServerError = statusCode >= 500;
 
   if (isServerError) {
@@ -21,13 +21,11 @@ module.exports.errorHandler = (error, req, res, next) => {
 
   return res.status(statusCode).json({
     error: {
-      code:
-        error.code ??
-        (isServerError
-          ? 'INTERNAL_SERVER_ERROR'
-          : 'REQUEST_ERROR'),
-      message: isServerError
-        ? 'Đã xảy ra lỗi, vui lòng thử lại sau'
+      code: 
+        error.code ?? 
+        (isServerError ? 'INTERNAL_SERVER_ERROR' : 'REQUEST_ERROR'),
+      message: 
+        isServerError ? 'Đã xảy ra lỗi, vui lòng thử lại sau'
         : error.message,
     },
   });

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import './RegisterPage.css';
+import '../App.css';
 
 export const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({}); // lưu lỗi riêng của từng input và hiển thị ngay bên dưới ở giao diện
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateForm = () => {

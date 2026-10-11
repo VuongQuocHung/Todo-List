@@ -18,6 +18,24 @@ module.exports.findUserByEmail = async (email) => {
   return result[0] ?? null; // cho dù trả về 1 user thì result vẫn có dạng mảng nên mới cần [0]
 };
 
+module.exports.findUserForLogin = async (
+  email
+) => {
+  const [rows] = await pool.execute(
+    `SELECT
+       id,
+       email,
+       password_hash AS passwordHash,
+       created_at AS createdAt
+     FROM users
+     WHERE email = ?
+     LIMIT 1`,
+    [email]
+  );
+
+  return rows[0] ?? null;
+};
+
 module.exports.createUser = async (email, hashedPassword) => {
   // const [result] = await pool.execute(
   //   `insert into users (email, password_hash) values (?, ?)`,
