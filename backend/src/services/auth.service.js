@@ -37,7 +37,7 @@ module.exports.registerUser = async ({
   email,
   password,
 }) => {
-  const normalizedUsername = username.trim().toLowerCase();
+  const normalizedUsername = username.trim()
   const normalizedFullname = fullname?.trim() || null;
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -49,9 +49,7 @@ module.exports.registerUser = async ({
     throw createUsernameExistsError();
   }
 
-  const existingUser = await userRepository.findUserByEmail(
-    normalizedEmail
-  );
+  const existingUser = await userRepository.findUserByEmail(normalizedEmail);
 
   if (existingUser) {
     throw createEmailExistsError();
@@ -116,6 +114,20 @@ module.exports.loginUser = async ({ email, password }) => {
       createdAt: existUser.createdAt,
     },
   };
-
 }
+
+module.exports.getCurrentUser = async (userId) => {
+  const user = await userRepository.findUserById(userId);
+
+  if (!user) {
+    const error = new Error('Bạn chưa đăng nhập');
+
+    error.statusCode = 401;
+    error.code = 'UNAUTHORIZED';
+
+    throw error;
+  }
+
+  return user;
+};
 

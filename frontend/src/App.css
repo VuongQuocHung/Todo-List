@@ -1,7 +1,16 @@
 .home-page {
-  min-height: 100vh;
+  min-height: calc(100vh - 76px);
   background: #f8fafc;
   color: #172033;
+}
+
+.site-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  border-bottom: 1px solid #e6ebf2;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
 }
 
 .home-header {
@@ -62,6 +71,19 @@
 }
 
 .home-register-link:hover {
+  background: #1d4ed8;
+}
+
+.home-login-link.is-active {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.home-todos-link.is-active {
+  color: #2563eb;
+}
+
+.home-register-link.is-active {
   background: #1d4ed8;
 }
 
@@ -346,7 +368,7 @@
 }
 
 .register-page {
-  min-height: 100vh;
+  min-height: calc(100vh - 76px);
   display: grid;
   place-items: center;
   padding: 32px 16px;
@@ -555,4 +577,40 @@
   font-size: 18px;
   display: block;
   margin: 10px;
+}
+
+
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-avatar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.header-user-name {
+  max-width: 140px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.home-nav .header-logout:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (max-width: 560px) {
+  .header-user-name {
+    display: none;
+  }
 }

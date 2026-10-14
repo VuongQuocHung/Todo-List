@@ -3,19 +3,6 @@ import { Link } from 'react-router-dom';
 export const HomePage = () => {
   return (
     <div className="home-page">
-      <header className="home-header">
-        <Link className="home-logo" to="/" aria-label="Todo App - Trang chủ">
-          <span className="home-logo-mark">✓</span>
-          Todo App
-        </Link>
-
-        <nav className="home-nav" aria-label="Điều hướng chính">
-          <a className="home-features-link" href="#features">Tính năng</a>
-          <Link className="home-login-link" to="/login">Đăng nhập</Link>
-          <Link className="home-register-link" to="/register">Đăng ký</Link>
-        </nav>
-      </header>
-
       <main id="top">
         <section className="home-hero">
           <div className="home-hero-content">

@@ -1,0 +1,69 @@
+import { AuthContext } from "./AuthContext";
+import { useEffect, useState } from "react";
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => { // Kiểm tra đăng nhập
+    let ignore = false; // bỏ qua kết quả của một lời gọi API cũ khi Component đã bị gỡ bỏ (unmount) hoặc khi useEffect đã chạy sang lượt mới.
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include'
+        });
+
+        if(!response.ok){
+          if(!ignore){
+            setUser(null);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        // console.log("Chay vao AuthProvider:", data);
+        if (!ignore) {
+          setUser(data.data);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setUser(null);
+        }
+      } finally {
+        if (!ignore) {
+          setIsAuthLoading(false);
+        }
+      }
+    };
+
+    checkAuth();
+
+    return () => {
+      ignore = true; // Đánh dấu là "Đừng quan tâm kết quả nữa!"
+    };
+  }, []);
+
+  const login = (loggedInUser) => {
+    setUser(loggedInUser);
+  }
+
+  const logout = async () => {
+    const response = await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include'
+    });
+
+    if(!response.ok){
+      throw new Error('Không thể đăng xuất');
+    }
+
+    setUser(null);
+  }
+
+  return (
+    <AuthContext.Provider 
+      value={{user, isAuthLoading, login, logout}}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
+};

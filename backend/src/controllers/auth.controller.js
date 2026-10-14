@@ -33,3 +33,27 @@ module.exports.loginPost = async (req, res, next) => {
   }
 }
 
+module.exports.me = async (req, res, next) => {
+  try {
+    const user = await authService.getCurrentUser(req.auth.userId);
+
+    res.set('Cache-Control', 'no-store');
+
+    return res.status(200).json({
+      data: user
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports.logoutPost = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  });
+
+  return res.status(204).send();
+};

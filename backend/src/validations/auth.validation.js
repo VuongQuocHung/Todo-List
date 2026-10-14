@@ -46,13 +46,17 @@ const loginSchema = z.object({
 module.exports.registerPost = (req, res, next) => {
   const result = registerSchema.safeParse(req.body);
 
+  console.log(result);
+
   if (!result.success) {
-    return res.status(400).json({
+    res.status(400).json({
       error: {
         code: 'VALIDATION_ERROR',
         message: result.error.issues[0].message,
       },
     });
+    console.log("Loi:", res);
+    return res;
   }
 
   req.body = result.data;

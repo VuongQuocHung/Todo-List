@@ -1,7 +1,5 @@
 const pool = require('../configs/database.config');
 
-
-
 module.exports.findUserByEmail = async (email) => {
   const [result] = await pool.execute(
     `select 
@@ -18,6 +16,23 @@ module.exports.findUserByEmail = async (email) => {
   );
   // console.log("result: ", result);
   return result[0] ?? null; // cho dù trả về 1 user thì result vẫn có dạng mảng nên mới cần [0]
+};
+
+module.exports.findUserById = async (id) => {
+  const [rows] = await pool.execute(
+    `SELECT
+       id,
+       username,
+       fullname,
+       email,
+       created_at AS createdAt
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [id]
+  );
+
+  return rows[0] ?? null;
 };
 
 module.exports.findUserByUsername = async (username) => {
@@ -63,15 +78,15 @@ module.exports.createUser = async (
   email,
   hashedPassword
 ) => {
-  // const [result] = await pool.execute(
-  //   `insert into users (email, password_hash) values (?, ?)`,
-  //   [email, hashedPassword]
-  // );
-
   const [result] = await pool.execute(
-    `INSERT INTO users (username, fullname, email, password_hash)
-     VALUES (?, ?, ?, ?)`,
-    [username, fullname, email, hashedPassword]
+    `insert into users (
+      username,
+      fullname,
+      email,
+      password_hash
+    )
+    values (?, ?, ?, ?)`,
+  [username, fullname, email, hashedPassword]
   );
 
   const insertId = result.insertId; // đây là khóa chính của bản ghi user mới được tạo

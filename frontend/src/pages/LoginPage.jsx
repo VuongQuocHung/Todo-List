@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Link , useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import '../App.css';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { login, isAuthLoading } = useContext(AuthContext);
 
   const validateForm = () => {
     const nextErrors = {};
@@ -33,6 +36,8 @@ export const LoginPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    if(isAuthLoading) return;
+
     if (isSubmitting || !validateForm()) {
       if (!isSubmitting) {
         toast.error('Vui lòng kiểm tra lại thông tin đăng nhập');
@@ -48,7 +53,7 @@ export const LoginPage = () => {
         password
       };
 
-      console.log(dataLogin);
+      // console.log(dataLogin);
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -60,16 +65,19 @@ export const LoginPage = () => {
       });
 
       const data = await response.json().catch(() => null);
-      console.log("data:", data);
+      
+      // console.log("Data sau khi login:\n", data.data);
 
       if (!response.ok) {
         throw new Error(
-          data?.error?.message || data?.message || 'Đăng nhập thất bại'
+          data?.error?.message || 'Đăng nhập thất bại'
         );
       }
 
+      login(data.data); // lưu thông tin user vào AuthContext
+
       toast.success('Đăng nhập thành công');
-      navigate('/');
+      navigate('/todos');
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -125,9 +133,13 @@ export const LoginPage = () => {
             )}
           </div>
 
-          <button className="register-submit" type="submit">
-            Đăng nhập
-          </button>
+         <button
+          className="register-submit"
+          type="submit"
+          disabled={isSubmitting || isAuthLoading}
+        >
+          {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+        </button>
 
           <p className="auth-switch">
             Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
