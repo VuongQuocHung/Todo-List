@@ -112,6 +112,47 @@ export const TodoApp = () => {
     }
   }
 
+  const handleChangeStatus = async (id, completed) => {
+    if (updatingId !== null) {
+      return;
+    }
+
+    setUpdatingId(id);
+
+    try {
+      const response = await fetch(`/api/todos/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          completed,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error?.message || 'Không cập nhật được trạng thái'
+        );
+      }
+
+      setTodoList((currentList) =>
+        currentList.map((item) =>
+          item.id === id ? result.data : item
+        )
+      );
+
+      toast.success('Cập nhật trạng thái thành công');
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
 
   return (
     <>

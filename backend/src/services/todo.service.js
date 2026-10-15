@@ -23,3 +23,13 @@ module.exports.createPost = async (userId, { title, description }) => {
 module.exports.getTodos = async (userId) => {
   return todoRepository.findTodosByUserId(userId);
 }
+
+module.exports.updateStatus = async (userId, todoId, completed) => {
+ const todo = await todoRepository.updateStatus(userId, todoId, completed);
+
+ if(!todo) {
+  throw new Error('Công việc không tìm thấy');
+ }
+
+ return todo;
+}

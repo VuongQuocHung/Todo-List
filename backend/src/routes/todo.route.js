@@ -9,5 +9,10 @@ router.post('/', authMiddleware.requireAuth, todoValidation.createPost, todoCont
 
 router.get('/', authMiddleware.requireAuth, todoController.getList);
 
+router.patch(
+  '/:id',
+  authMiddleware.requireAuth,
+  todoController.updateStatus
+);
 
 module.exports = router;

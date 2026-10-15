@@ -47,3 +47,37 @@ module.exports.findTodosByUserId = async (userId) => {
     completed: Boolean(todo.completed),
   }));
 }
+
+module.exports.updateStatus = async (userId, todoId, completed) => {
+  await pool.execute(
+    `UPDATE todos
+    SET completed = ?
+    WHERE id = ? AND user_id = ?`,
+    [completed, todoId, userId]
+  );
+
+  const [rows] = await pool.execute(
+    `select
+      id,
+      title,
+      description,
+      completed,
+      created_at as createdAt,
+      updated_at as updatedAt
+    from todos
+    where id = ? and user_id = ?
+    `,
+    [todoId, userId]
+  );
+
+  const todo = rows[0];
+
+  if (!todo) {
+    return null;
+  }
+
+  return {
+    ...todo,
+    completed: Boolean(todo.completed),
+  };
+};
