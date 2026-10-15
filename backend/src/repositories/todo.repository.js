@@ -1,0 +1,29 @@
+const pool = require('../configs/database.config');
+
+module.exports.createTodo = async (userId, title, description, completed) => {
+  const [result] = await pool.execute(
+    `insert into todos (user_id, title, description, completed) values (?, ?, ?, ?)`,
+    [userId, title, description, completed]
+  )
+
+  const insertId = result.insertId;
+
+  const [rows] = await pool.execute(
+    `select id,
+      title,
+      description,
+      completed,
+      created_at AS createdAt,
+      updated_at AS updatedAt
+    from todos 
+    where id = ? and user_id = ?`,
+    [insertId, userId]
+  );
+
+  const todo = rows[0];
+
+  return {
+    ...todo,
+    completed: Boolean(todo.completed),
+  }
+}

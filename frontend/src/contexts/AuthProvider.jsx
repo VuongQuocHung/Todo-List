@@ -1,5 +1,6 @@
 import { AuthContext } from "./AuthContext";
 import { useEffect, useState } from "react";
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -19,10 +20,10 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        const data = await response.json();
+        const result = await response.json();
         // console.log("Chay vao AuthProvider:", data);
         if (!ignore) {
-          setUser(data.data);
+          setUser(result.data);
         }
       } catch (error) {
         if (!ignore) {
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
 
     return () => {
-      ignore = true; // Đánh dấu là "Đừng quan tâm kết quả nữa!"
+      ignore = true; // đánh dấu rằng kết quả request này không còn được sử dụng
     };
   }, []);
 

@@ -1,121 +1,186 @@
 import { useState } from "react";
-
-const dataDemo = [
-  {
-    id: 1,
-    content: "Công việc 1",
-    status: "initial",
-    isEdit: false
-  },
-  {
-    id: 2,
-    content: "Công việc 2",
-    status: "initial",
-    isEdit: false
-  },
-  {
-    id: 3,
-    content: "Công việc 3",
-    status: "doing",
-    isEdit: false
-  },
-  {
-    id: 4,
-    content: "Công việc 4",
-    status: "completed",
-    isEdit: false
-  },
-  {
-    id: 5,
-    content: "Công việc 5",
-    status: "rejected",
-    isEdit: false
-  }
-];
+import { toast } from "sonner";
 
 
 export const TodoApp = () => {
-  const [todoList, setTodoList] = useState(dataDemo);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [todoList, setTodoList] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreate = (event) => {
+  const validateForm = () => {
+    const nextErrors = {};
+
+    if (!title.trim()) {
+      nextErrors.title = 'Vui lòng nhập tiêu đề';
+    } else if (title.trim().length > 200) {
+      nextErrors.title = 'Tiêu đề không được vượt quá 200 ký tự';
+    }
+
+    if (description.trim().length > 2000) {
+      nextErrors.description = 'Mô tả không được vượt quá 2.000 ký tự';
+    }
+
+    setErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleCreate = async (event) => {
     event.preventDefault(); // không reload trang
-    const content = event.target.content.value; // giá trị từ ô input
-    if(content){
-      setTodoList([
-        ...todoList, 
-        {
-          id: Date.now(),
-          content: content,
-          status : 'initial'
-        }
-    ]);
-      event.target.content.value = "";
+    
+    if(isSubmitting || !validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/todos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || null,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+      console.log("ket qua la:",result);
+
+      if (!response.ok) {
+        throw new Error(result.message);
+      }
+
+      setTodoList((currentList) => [result.data, ...currentList]);
+
+      console.log(todoList);
+
+      setTitle('');
+      setDescription('');
+      setErrors({});
+
+      toast.success('Tạo công việc thành công');
+
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
-  const handleRemove = (id) => {
-    const todoListFilter = todoList.filter(item => item.id !== id);
-    setTodoList(todoListFilter);
-  }
+  // const handleRemove = (id) => {
+  //   const todoListFilter = todoList.filter(item => item.id !== id);
+  //   setTodoList(todoListFilter);
+  // }
 
-  const handleChangeStatus = (event, id) => {
-    const status = event.target.value;
-    setTodoList(todoList.map(item =>
-      item.id === id ? { ...item, status } : item
-    ));
-  }
+  // const handleChangeStatus = (event, id) => {
+  //   const status = event.target.value;
+  //   setTodoList(todoList.map(item =>
+  //     item.id === id ? { ...item, status } : item
+  //   ));
+  // }
 
-  const handleEdit = (id, isEdit) => {
-    const todoListNew = [...todoList];
-    const itemUpdate = todoListNew.find(item => item.id === id);
-    itemUpdate.isEdit = isEdit;
-    setTodoList(todoListNew); 
-  }
+  // const handleEdit = (id, isEdit) => {
+  //   const todoListNew = [...todoList];
+  //   const itemUpdate = todoListNew.find(item => item.id === id);
+  //   itemUpdate.isEdit = isEdit;
+  //   setTodoList(todoListNew); 
+  // }
 
-  const handleUpdate = (event, id) => {
-    const content = event.target.value;
-    const todoListNew = [...todoList];
-    const itemUpdate = todoListNew.find(item => item.id === id);
-    itemUpdate.content = content;
-    setTodoList(todoListNew);
-  }
+  // const handleUpdate = (event, id) => {
+  //   const content = event.target.value;
+  //   const todoListNew = [...todoList];
+  //   const itemUpdate = todoListNew.find(item => item.id === id);
+  //   itemUpdate.content = content;
+  //   setTodoList(todoListNew);
+  // }
 
 
   return (
     <>
-      <div className="todo">
-        <form className="todo__create" onSubmit={handleCreate}>
-          <input name="content" placeholder="Nhập nội dung công việc..."/>
-          <button>Tạo công việc</button>
+      <main className="todo">
+        <h1>Công việc của tôi</h1>
+
+        <form
+          className="todo-form"
+          onSubmit={handleCreate}
+          noValidate
+        >
+          <div className="register-field">
+            <label htmlFor="todo-title">Tiêu đề *</label>
+
+            <input
+              id="todo-title"
+              name="title"
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Nhập tiêu đề công việc"
+              disabled={isSubmitting}
+            />
+
+            {errors.title && (
+              <p className="register-field-error">
+                {errors.title}
+              </p>
+            )}
+          </div>
+
+          <div className="register-field">
+            <label htmlFor="todo-description">
+              Mô tả (không bắt buộc)
+            </label>
+
+            <textarea
+              id="todo-description"
+              name="description"
+              rows={4}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Nhập mô tả công việc"
+              disabled={isSubmitting}
+            />
+
+            {errors.description && (
+              <p className="register-field-error">
+                {errors.description}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="register-submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Đang tạo...' : 'Tạo công việc'}
+          </button>
         </form>
 
-        <div className="todo__list">
-          {todoList.map(item => (
-            <div key={item.id} className={`todo__item todo__item--${item.status}`}> 
-            {item.isEdit ? (
-              <input defaultValue={item.content} 
-              onBlur = {() => handleEdit(item.id, false)}
-              onChange={(event) => handleUpdate(event, item.id)}
-              />
-            ) : (
-              <span onClick={() => handleEdit(item.id, true)}>{item.content}</span>
-            )}
+        <section className="todo__list">
+          <h2>Công việc vừa tạo</h2>
+
+          {todoList.length === 0 && (
+            <p>Chưa có công việc vừa tạo.</p>
+          )}
+
+          {todoList.map((item) => (
+            <article key={item.id} className="todo-card">
+              <h3>{item.title}</h3>
+
+              {item.description && <p>{item.description}</p>}
 
               <span>
-                <select defaultValue={item.status} 
-                onChange={(event) => handleChangeStatus(event, item.id)}
-                >
-                  <option value={"initial"}>Khởi tạo</option>
-                  <option value={"doing"}>Đang làm</option>
-                  <option value={"completed"}>Hoàn thành</option>
-                  <option value={"rejected"}>Hủy bỏ</option>
-                </select>
-                <button onClick={() => handleRemove(item.id)}>Xóa</button>
+                {item.completed ? 'Đã hoàn thành' : 'Chưa hoàn thành'}
               </span>
-            </div>
+            </article>
           ))}
-        </div>
-      </div>
+        </section>
+      </main>
     </>
   )
 }

@@ -64,9 +64,9 @@ export const LoginPage = () => {
         credentials: 'include'
       });
 
-      const data = await response.json().catch(() => null);
+      const result = await response.json().catch(() => null);
       
-      // console.log("Data sau khi login:\n", data.data);
+      // console.log("Data sau khi login:\n", result.data);
 
       if (!response.ok) {
         throw new Error(
@@ -74,7 +74,7 @@ export const LoginPage = () => {
         );
       }
 
-      login(data.data); // lưu thông tin user vào AuthContext
+      login(result.data); // lưu thông tin user vào AuthContext
 
       toast.success('Đăng nhập thành công');
       navigate('/todos');

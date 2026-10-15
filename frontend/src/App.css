@@ -546,6 +546,47 @@
   background-color: #e38c8c;
 }
 
+.todo-form {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.todo-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font: inherit;
+  resize: vertical;
+}
+
+.todo-card {
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.todo-card h3 {
+  margin: 0 0 8px;
+}
+
+.todo-card p {
+  white-space: pre-wrap;
+}
+
+.todo-card h3,
+.todo-card p {
+  overflow-wrap: anywhere;
+}
+
+.todo-card span {
+  color: #666;
+  font-size: 14px;
+}
+
 * {
   box-sizing: border-box;
 }
