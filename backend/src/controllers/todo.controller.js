@@ -43,3 +43,15 @@ module.exports.updateStatus = async (req, res, next) => {
     next(error);
   }
 }
+
+module.exports.deleteTodo = async (req, res, next) => {
+  try {
+    const userId = req.auth.userId;
+    const todoId = req.params.id;
+    await todoService.deleteTodo(userId, todoId);
+
+    return res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};

@@ -15,4 +15,11 @@ router.patch(
   todoController.updateStatus
 );
 
+router.delete(
+  '/:id',
+  authMiddleware.requireAuth,
+  todoValidation.deleteTodo,
+  todoController.deleteTodo
+);
+
 module.exports = router;

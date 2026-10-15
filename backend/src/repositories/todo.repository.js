@@ -81,3 +81,12 @@ module.exports.updateStatus = async (userId, todoId, completed) => {
     completed: Boolean(todo.completed),
   };
 };
+
+module.exports.deleteTodo = async (userId, todoId) => {
+  const [result] = await pool.execute(
+    `delete from todos where id = ? and user_id = ?`,
+    [todoId, userId]
+  );
+
+  return result.affectedRows;
+}

@@ -12,6 +12,7 @@ export const TodoApp = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const validateForm = () => {
     const nextErrors = {};
@@ -31,42 +32,42 @@ export const TodoApp = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
-      useEffect(() => {
-      let ignore = false;
+  useEffect(() => {
+    let ignore = false;
 
-      const loadTodos = async () => {
-        try {
-          const response = await fetch('/api/todos', {
-            credentials: 'include',
-          });
+    const loadTodos = async () => {
+      try {
+        const response = await fetch('/api/todos', {
+          credentials: 'include',
+        });
 
-          const result = await response.json().catch(() => null);
+        const result = await response.json().catch(() => null);
 
-          if (!response.ok) {
-            throw new Error(
-              result.error?.message || 'Không tải được công việc'
-            );
-          }
-          if (!ignore) {
-            setTodoList(result.data);
-          }
-        } catch (error) {
-          if (!ignore) {
-            setLoadError(error.message);
-          }
-        } finally {
-          if (!ignore) {
-            setIsLoading(false);
-          }
+        if (!response.ok) {
+          throw new Error(
+            result.error?.message || 'Không tải được công việc'
+          );
         }
-      };
-
-      loadTodos();
-
-      return () => {
-        ignore = true;
+        if (!ignore) {
+          setTodoList(result.data);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setLoadError(error.message);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
       }
-    }, [])
+    };
+
+    loadTodos();
+
+    return () => {
+      ignore = true;
+    }
+  }, [])
 
   const handleCreate = async (event) => {
     event.preventDefault(); // không reload trang
@@ -153,6 +154,42 @@ export const TodoApp = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (deletingId !== null) {
+      return;
+    }
+
+    if (!window.confirm('Bạn muốn xóa công việc này?')) {
+      return;
+    }
+
+    setDeletingId(id);
+
+    try {
+      const response = await fetch(`/api/todos/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+
+        throw new Error(
+          result.error?.message || 'Không xóa được công việc'
+        );
+      }
+
+      setTodoList((currentList) =>
+        currentList.filter((item) => item.id !== id)
+      );
+
+      toast.success('Xóa công việc thành công');
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <>
@@ -252,6 +289,14 @@ export const TodoApp = () => {
                   </label>
 
                   {updatingId === item.id && <span> Đang lưu...</span>}
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id)}
+                    disabled={updatingId !== null || deletingId !== null}
+                  >
+                    {deletingId === item.id ? 'Đang xóa...' : 'Xóa'}
+                  </button>
                 </article>
               ))}
             </>

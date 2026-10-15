@@ -62,3 +62,15 @@ module.exports.createPost = (req, res, next) => {
 
   next();
 };
+
+module.exports.deleteTodo = (req, res, next) => {
+  if (!/^[1-9]\d{0,19}$/.test(req.params.id)) {
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'ID công việc không hợp lệ',
+      },
+    });
+  }
+  next();
+};
