@@ -9,12 +9,17 @@ module.exports.createPost = async (userId, { title, description }) => {
       throw new Error('User not found');
     }
 
-    const todo = await todoRepository.createTodo(userId, title, description, false);
+    const todo = await todoRepository.createTodo(userId, title, description || null, false);
 
     return todo;
     
   } catch (error) {
-    console.error(error);
-    return;
+    throw new Error(
+      result?.error?.message || 'Không tạo được công việc'
+    );
   }
 };
+
+module.exports.getTodos = async (userId) => {
+  return todoRepository.findTodosByUserId(userId);
+}

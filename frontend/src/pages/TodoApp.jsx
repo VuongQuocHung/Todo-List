@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect,useState } from "react";
 import { toast } from "sonner";
 
 
@@ -8,6 +8,10 @@ export const TodoApp = () => {
   const [todoList, setTodoList] = useState([]);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [updatingId, setUpdatingId] = useState(null);
 
   const validateForm = () => {
     const nextErrors = {};
@@ -27,10 +31,46 @@ export const TodoApp = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
+      useEffect(() => {
+      let ignore = false;
+
+      const loadTodos = async () => {
+        try {
+          const response = await fetch('/api/todos', {
+            credentials: 'include',
+          });
+
+          const result = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            throw new Error(
+              result.error?.message || 'Không tải được công việc'
+            );
+          }
+          if (!ignore) {
+            setTodoList(result.data);
+          }
+        } catch (error) {
+          if (!ignore) {
+            setLoadError(error.message);
+          }
+        } finally {
+          if (!ignore) {
+            setIsLoading(false);
+          }
+        }
+      };
+
+      loadTodos();
+
+      return () => {
+        ignore = true;
+      }
+    }, [])
+
   const handleCreate = async (event) => {
     event.preventDefault(); // không reload trang
-    
-    if(isSubmitting || !validateForm()) {
+    if (isLoading || isSubmitting || !validateForm()) {
       return;
     }
 
@@ -44,7 +84,7 @@ export const TodoApp = () => {
         },
         body: JSON.stringify({
           title: title.trim(),
-          description: description.trim() || null,
+          description: description.trim(),
         }),
       });
 
@@ -71,33 +111,6 @@ export const TodoApp = () => {
       setIsSubmitting(false);
     }
   }
-
-  // const handleRemove = (id) => {
-  //   const todoListFilter = todoList.filter(item => item.id !== id);
-  //   setTodoList(todoListFilter);
-  // }
-
-  // const handleChangeStatus = (event, id) => {
-  //   const status = event.target.value;
-  //   setTodoList(todoList.map(item =>
-  //     item.id === id ? { ...item, status } : item
-  //   ));
-  // }
-
-  // const handleEdit = (id, isEdit) => {
-  //   const todoListNew = [...todoList];
-  //   const itemUpdate = todoListNew.find(item => item.id === id);
-  //   itemUpdate.isEdit = isEdit;
-  //   setTodoList(todoListNew); 
-  // }
-
-  // const handleUpdate = (event, id) => {
-  //   const content = event.target.value;
-  //   const todoListNew = [...todoList];
-  //   const itemUpdate = todoListNew.find(item => item.id === id);
-  //   itemUpdate.content = content;
-  //   setTodoList(todoListNew);
-  // }
 
 
   return (
@@ -162,23 +175,46 @@ export const TodoApp = () => {
         </form>
 
         <section className="todo__list">
-          <h2>Công việc vừa tạo</h2>
+          <h2>Danh sách công việc</h2>
 
-          {todoList.length === 0 && (
-            <p>Chưa có công việc vừa tạo.</p>
+          {isLoading ? (
+            <p>Đang tải công việc...</p>
+          ) : loadError ? (
+            <p role="alert">{loadError}</p>
+          ) : (
+            <>
+              {todoList.length === 0 && (
+                <p>Chưa có công việc nào.</p>
+              )}
+
+              {todoList.map((item) => (
+                <article key={item.id} className="todo-card">
+                  <h3>{item.title}</h3>
+
+                  {item.description && <p>{item.description}</p>}
+
+                  <label>
+                    Trạng thái:{' '}
+                    <select
+                      value={String(item.completed)}
+                      disabled={updatingId !== null}
+                      onChange={(event) =>
+                        handleChangeStatus(
+                          item.id,
+                          event.target.value === 'true'
+                        )
+                      }
+                    >
+                      <option value="false">Chưa hoàn thành</option>
+                      <option value="true">Đã hoàn thành</option>
+                    </select>
+                  </label>
+
+                  {updatingId === item.id && <span> Đang lưu...</span>}
+                </article>
+              ))}
+            </>
           )}
-
-          {todoList.map((item) => (
-            <article key={item.id} className="todo-card">
-              <h3>{item.title}</h3>
-
-              {item.description && <p>{item.description}</p>}
-
-              <span>
-                {item.completed ? 'Đã hoàn thành' : 'Chưa hoàn thành'}
-              </span>
-            </article>
-          ))}
         </section>
       </main>
     </>

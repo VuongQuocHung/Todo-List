@@ -7,4 +7,7 @@ const todoValidation = require('../validations/todo.validation');
 
 router.post('/', authMiddleware.requireAuth, todoValidation.createPost, todoController.createPost);
 
+router.get('/', authMiddleware.requireAuth, todoController.getList);
+
+
 module.exports = router;

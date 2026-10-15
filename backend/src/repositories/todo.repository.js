@@ -27,3 +27,23 @@ module.exports.createTodo = async (userId, title, description, completed) => {
     completed: Boolean(todo.completed),
   }
 }
+
+module.exports.findTodosByUserId = async (userId) => {
+  const [rows] = await pool.execute(
+    `select id,
+      title,
+      description,
+      completed,
+      created_at AS createdAt,
+      updated_at AS updatedAt
+    from todos 
+    where user_id = ?
+    order by created_at desc, id desc`,
+    [userId]
+  );
+  
+  return rows.map((todo) => ({
+    ...todo,
+    completed: Boolean(todo.completed),
+  }));
+}
