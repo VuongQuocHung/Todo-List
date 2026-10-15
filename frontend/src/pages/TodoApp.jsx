@@ -14,6 +14,8 @@ export const TodoApp = () => {
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  const [keyword, setKeyword] = useState('');
+
   const validateForm = () => {
     const nextErrors = {};
 
@@ -191,6 +193,11 @@ export const TodoApp = () => {
     }
   };
 
+
+  const filteredTodos = todoList.filter((item) => {
+    return item.title.toLowerCase().includes(keyword.trim().toLowerCase());
+  })
+
   return (
     <>
       <main className="todo">
@@ -254,18 +261,31 @@ export const TodoApp = () => {
 
         <section className="todo__list">
           <h2>Danh sách công việc</h2>
-
+          <div className="register-field">
+            <label htmlFor="todo-search">Tìm công việc</label>
+            <input
+              id="todo-search"
+              type="search"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Nhập tiêu đề cần tìm..."
+            />
+          </div>
           {isLoading ? (
             <p>Đang tải công việc...</p>
           ) : loadError ? (
             <p role="alert">{loadError}</p>
           ) : (
             <>
-              {todoList.length === 0 && (
-                <p>Chưa có công việc nào.</p>
+              {filteredTodos.length === 0 && (
+                <p>
+                  {keyword.trim()
+                    ? 'Không tìm thấy công việc phù hợp.'
+                    : 'Chưa có công việc nào.'}
+                </p>
               )}
 
-              {todoList.map((item) => (
+              {filteredTodos.map((item) => (
                 <article key={item.id} className="todo-card">
                   <h3>{item.title}</h3>
 
