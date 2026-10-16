@@ -12,6 +12,14 @@ const createSchema = z.object({
     .trim()
     .max(2000, 'Mô tả không được vượt quá 2.000 ký tự')
     .optional(),
+  dueDate: z
+  .iso.date('Hạn hoàn thành phải là ngày hợp lệ')
+  .refine(
+    (value) => value >= '1000-01-01',
+    'Năm phải từ 1000 trở lên'
+  )
+  .nullable()
+  .optional(),
 }).strict();
 
 const updateStatusSchema = z.object({

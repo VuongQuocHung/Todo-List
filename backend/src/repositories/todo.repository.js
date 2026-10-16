@@ -1,9 +1,9 @@
 const pool = require('../configs/database.config');
 
-module.exports.createTodo = async (userId, title, description, completed) => {
+module.exports.createTodo = async (userId, title, description, completed, dueDate) => {
   const [result] = await pool.execute(
-    `insert into todos (user_id, title, description, completed) values (?, ?, ?, ?)`,
-    [userId, title, description, completed]
+    `insert into todos (user_id, title, description, completed, due_date) values (?, ?, ?, ?, ?)`,
+    [userId, title, description, completed, dueDate]
   )
 
   const insertId = result.insertId;
@@ -13,6 +13,7 @@ module.exports.createTodo = async (userId, title, description, completed) => {
       title,
       description,
       completed,
+      DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
       created_at AS createdAt,
       updated_at AS updatedAt
     from todos 
@@ -34,6 +35,7 @@ module.exports.findTodosByUserId = async (userId) => {
       title,
       description,
       completed,
+      DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
       created_at AS createdAt,
       updated_at AS updatedAt
     from todos 
@@ -62,6 +64,7 @@ module.exports.updateStatus = async (userId, todoId, completed) => {
       title,
       description,
       completed,
+      DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
       created_at as createdAt,
       updated_at as updatedAt
     from todos

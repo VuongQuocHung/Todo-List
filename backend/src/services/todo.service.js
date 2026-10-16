@@ -1,23 +1,26 @@
 const userRepository = require('../repositories/user.repository');
 const todoRepository = require('../repositories/todo.repository');
 
-module.exports.createPost = async (userId, { title, description }) => {
-  try {
-    const user = await userRepository.findUserById(userId);
+module.exports.createPost = async (userId, { title, description, dueDate }) => {
+  const user = await userRepository.findUserById(userId);
 
-    if (!user) {
-      throw new Error('User not found');
-    }
+  if (!user) {
+    const error = new Error('Vui lòng đăng nhập lại');
+    error.statusCode = 401;
+    error.code = 'UNAUTHORIZED';
 
-    const todo = await todoRepository.createTodo(userId, title, description || null, false);
-
-    return todo;
-    
-  } catch (error) {
-    throw new Error(
-      result?.error?.message || 'Không tạo được công việc'
-    );
+    throw error;
   }
+
+  const todo = await todoRepository.createTodo(
+    userId, 
+    title, 
+    description || null, 
+    false,
+    dueDate || null
+  );
+
+  return todo;
 };
 
 module.exports.getTodos = async (userId) => {

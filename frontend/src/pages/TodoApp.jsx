@@ -15,6 +15,7 @@ export const TodoApp = () => {
   const [deletingId, setDeletingId] = useState(null);
 
   const [keyword, setKeyword] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   const validateForm = () => {
     const nextErrors = {};
@@ -34,43 +35,6 @@ export const TodoApp = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  useEffect(() => {
-    let ignore = false;
-
-    const loadTodos = async () => {
-      try {
-        const response = await fetch('/api/todos', {
-          credentials: 'include',
-        });
-
-        const result = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(
-            result.error?.message || 'Không tải được công việc'
-          );
-        }
-        if (!ignore) {
-          setTodoList(result.data);
-        }
-      } catch (error) {
-        if (!ignore) {
-          setLoadError(error.message);
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadTodos();
-
-    return () => {
-      ignore = true;
-    }
-  }, [])
-
   const handleCreate = async (event) => {
     event.preventDefault(); // không reload trang
     if (isLoading || isSubmitting || !validateForm()) {
@@ -88,6 +52,7 @@ export const TodoApp = () => {
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim(),
+          dueDate: dueDate || null,
         }),
       });
 
@@ -95,16 +60,20 @@ export const TodoApp = () => {
       console.log("ket qua la:",result);
 
       if (!response.ok) {
-        throw new Error(result.message);
+        throw new Error(
+          result?.error?.message || 'Không tạo được công việc'
+        );
       }
 
       setTodoList((currentList) => [result.data, ...currentList]);
 
       console.log(todoList);
 
+      // sau khi tạo xong, reset form tạo
       setTitle('');
       setDescription('');
       setErrors({});
+      setDueDate('');
 
       toast.success('Tạo công việc thành công');
 
@@ -156,6 +125,26 @@ export const TodoApp = () => {
     }
   };
 
+  const formatDueDate = (date) => {
+    return date.split("-").reverse().join("/");
+  }
+
+  const vnDateFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  const isOverdue = (todo) => {
+    if(!todo.dueDate || todo.completed){
+      return false;
+    }
+
+    const today = vnDateFormatter.format(new Date());
+    return todo.dueDate < today;
+  }
+
   const handleDelete = async (id) => {
     if (deletingId !== null) {
       return;
@@ -193,6 +182,42 @@ export const TodoApp = () => {
     }
   };
 
+    useEffect(() => {
+    let ignore = false;
+
+    const loadTodos = async () => {
+      try {
+        const response = await fetch('/api/todos', {
+          credentials: 'include',
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            result.error?.message || 'Không tải được công việc'
+          );
+        }
+        if (!ignore) {
+          setTodoList(result.data);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setLoadError(error.message);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadTodos();
+
+    return () => {
+      ignore = true;
+    }
+  }, [])
 
   const filteredTodos = todoList.filter((item) => {
     return item.title.toLowerCase().includes(keyword.trim().toLowerCase());
@@ -202,7 +227,6 @@ export const TodoApp = () => {
     <>
       <main className="todo">
         <h1>Công việc của tôi</h1>
-
         <form
           className="todo-form"
           onSubmit={handleCreate}
@@ -232,6 +256,20 @@ export const TodoApp = () => {
             <label htmlFor="todo-description">
               Mô tả (không bắt buộc)
             </label>
+            
+            <div className="register-field">
+              <label htmlFor="todo-due-date">
+                Hạn hoàn thành (không bắt buộc)
+              </label>
+
+              <input
+                id="todo-due-date"
+                type="date"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
 
             <textarea
               id="todo-description"
@@ -291,6 +329,14 @@ export const TodoApp = () => {
 
                   {item.description && <p>{item.description}</p>}
 
+                  <p>
+                    Hạn hoàn thành:{' '}
+                    {item.dueDate ? formatDueDate(item.dueDate) : 'Chưa đặt hạn'}
+
+                    {isOverdue(item) && (
+                      <strong style={{ color: '#dc2626' }}> — Quá hạn</strong>
+                    )}
+                  </p>
                   <label>
                     Trạng thái:{' '}
                     <select
