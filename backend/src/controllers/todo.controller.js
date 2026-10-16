@@ -44,6 +44,21 @@ module.exports.updateStatus = async (req, res, next) => {
   }
 }
 
+module.exports.updateTodo = async (req, res, next) => {
+  try {
+    const userId = req.auth.userId;
+    const todoId = req.params.id;
+
+    const todo = await todoService.updateTodo(userId, todoId, req.body);
+
+    return res.status(200).json({
+      data: todo,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports.deleteTodo = async (req, res, next) => {
   try {
     const userId = req.auth.userId;

@@ -70,7 +70,7 @@ export const LoginPage = () => {
 
       if (!response.ok) {
         throw new Error(
-          data?.error?.message || 'Đăng nhập thất bại'
+          result?.error?.message || 'Đăng nhập thất bại'
         );
       }
 

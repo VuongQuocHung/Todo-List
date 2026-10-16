@@ -9,11 +9,7 @@ router.post('/', authMiddleware.requireAuth, todoValidation.createPost, todoCont
 
 router.get('/', authMiddleware.requireAuth, todoController.getList);
 
-router.patch(
-  '/:id',
-  authMiddleware.requireAuth,
-  todoController.updateStatus
-);
+router.patch('/:id', authMiddleware.requireAuth, todoValidation.updateTodo, todoController.updateTodo);
 
 router.delete(
   '/:id',

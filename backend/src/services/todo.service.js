@@ -37,6 +37,19 @@ module.exports.updateStatus = async (userId, todoId, completed) => {
  return todo;
 }
 
+module.exports.updateTodo = async (userId, todoId, updateData) => {
+  const todo = await todoRepository.updateTodo(userId, todoId, updateData);
+
+  if (!todo) {
+    const error = new Error('Công việc không tìm thấy');
+    error.statusCode = 404;
+    error.code = 'TODO_NOT_FOUND';
+    throw error;
+  }
+
+  return todo;
+};
+
 module.exports.deleteTodo = async (userId, todoId) => {
   const deletedRecord = await todoRepository.deleteTodo(userId, todoId);
 

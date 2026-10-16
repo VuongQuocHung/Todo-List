@@ -85,6 +85,64 @@ module.exports.updateStatus = async (userId, todoId, completed) => {
   };
 };
 
+module.exports.updateTodo = async (userId, todoId, updates) => {
+  const setClauses = [];
+  const values = [];
+
+  if (updates.title !== undefined) {
+    setClauses.push('title = ?');
+    values.push(updates.title);
+  }
+  if (updates.description !== undefined) {
+    setClauses.push('description = ?');
+    values.push(updates.description);
+  }
+  if (updates.dueDate !== undefined) {
+    setClauses.push('due_date = ?');
+    values.push(updates.dueDate);
+  }
+  if (updates.completed !== undefined) {
+    setClauses.push('completed = ?');
+    values.push(updates.completed);
+  }
+
+  if (setClauses.length > 0) {
+    values.push(todoId, userId);
+    await pool.execute(
+      `UPDATE todos
+       SET ${setClauses.join(', ')}
+       WHERE id = ? AND user_id = ?`,
+      values
+    );
+  }
+
+  const [rows] = await pool.execute(
+    `select
+      id,
+      title,
+      description,
+      completed,
+      DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
+      created_at as createdAt,
+      updated_at as updatedAt
+    from todos
+    where id = ? and user_id = ?
+    `,
+    [todoId, userId]
+  );
+
+  const todo = rows[0];
+
+  if (!todo) {
+    return null;
+  }
+
+  return {
+    ...todo,
+    completed: Boolean(todo.completed),
+  };
+};
+
 module.exports.deleteTodo = async (userId, todoId) => {
   const [result] = await pool.execute(
     `delete from todos where id = ? and user_id = ?`,

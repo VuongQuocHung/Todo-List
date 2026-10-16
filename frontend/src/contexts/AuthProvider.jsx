@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
         if (!ignore) {
           setUser(result.data);
         }
-      } catch (error) {
+      } catch {
         if (!ignore) {
           setUser(null);
         }
