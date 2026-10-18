@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Plus,
-  X,
   Check,
   Calendar,
   Search,
@@ -12,33 +11,17 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 
-const vnDateFormatter = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Asia/Ho_Chi_Minh',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
+import {
+  formatDueDate,
+  isOverdue
+} from '../utils/todoDate';
 
-const formatDueDate = (dateStr) => {
-  if (!dateStr) return '';
-  const clean = dateStr.slice(0, 10);
-  const parts = clean.split('-');
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
-  return dateStr;
-};
+import { TodoCreateForm } from '../components/todo/TodoCreateForm';
+
 
 export const TodoApp = () => {
-  // State hiển thị toggle đóng/mở
+  // State kiểm soát trạng thái Ẩn / Hiện (Đóng / Mở) của form tạo công việc mới
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-  // State form tạo công việc
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // State danh sách công việc
   const [todoList, setTodoList] = useState([]);
@@ -61,23 +44,6 @@ export const TodoApp = () => {
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  const validateCreateForm = () => {
-    const nextErrors = {};
-
-    if (!title.trim()) {
-      nextErrors.title = 'Vui lòng nhập tiêu đề';
-    } else if (title.trim().length > 200) {
-      nextErrors.title = 'Tiêu đề không được vượt quá 200 ký tự';
-    }
-
-    if (description.trim().length > 2000) {
-      nextErrors.description = 'Mô tả không được vượt quá 2.000 ký tự';
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
   const matchesSearch = (todo) => {
     return todo.title
       .toLowerCase()
@@ -86,66 +52,6 @@ export const TodoApp = () => {
 
   const handleToggleCreate = () => { // Bật tắt form tạo công việc
     setIsCreateOpen((prev) => !prev); // đang đóng thì bấm sẽ mở, đang mở thì bấm sẽ đóng lại.
-    if (isCreateOpen) {
-      setErrors({});
-    }
-  };
-
-  const handleCancelCreate = () => { // Hủy tạo công việc
-    setIsCreateOpen(false);
-    setTitle('');
-    setDescription('');
-    setDueDate('');
-    setErrors({});
-  };
-
-  const handleCreate = async (event) => {
-    event.preventDefault();
-    if (isLoading || isSubmitting || !validateCreateForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch('/api/todos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          dueDate: dueDate || null,
-        }),
-      });
-
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(result?.error?.message || 'Không tạo được công việc');
-      }
-
-      if (matchesSearch(result.data)) {
-        setTodoList((currentList) => [
-          result.data,
-          ...currentList,
-        ]);
-      }
-
-      setTitle('');
-      setDescription('');
-      setDueDate('');
-      setErrors({});
-      setIsCreateOpen(false); // Đóng form sau khi tạo thành công
-
-      toast.success('Tạo công việc thành công');
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleStartEdit = (todo) => { // Chỉnh sửa một công việc đã có
@@ -242,15 +148,6 @@ export const TodoApp = () => {
     }
   };
 
-  const isOverdue = (todo) => {
-    if (!todo.dueDate || todo.completed) {
-      return false;
-    }
-
-    const today = vnDateFormatter.format(new Date());
-    return todo.dueDate < today;
-  };
-
   const handleDelete = async (id) => {
     if (deletingId !== null) {
       return;
@@ -298,6 +195,37 @@ export const TodoApp = () => {
   const handleClearSearch = () => {
     setKeyword('');
     setSearchKeyword('');
+  };
+
+  const handleCreateTodo = async (todoData) => {
+    const response = await fetch('/api/todos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(todoData),
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error?.message ||
+        'Không tạo được công việc'
+      );
+    }
+
+    const newTodo = result.data;
+
+    if (matchesSearch(newTodo)) {
+      setTodoList((currentList) => [
+        newTodo,
+        ...currentList,
+      ]);
+    }
+
+    return newTodo;
   };
 
   useEffect(() => {
@@ -409,102 +337,11 @@ export const TodoApp = () => {
 
         {/* Form tạo công việc mới */}
         {isCreateOpen && (
-          <section className="todo-create-card">
-            <div className="todo-create-header">
-              <div className="todo-create-title">
-                <span className="todo-create-icon">
-                  <Plus size={16} />
-                </span>
-                <span>Thêm công việc mới</span>
-              </div>
-              <button
-                type="button"
-                className="todo-icon-btn-close"
-                onClick={handleCancelCreate}
-                title="Đóng form"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreate} noValidate>
-              <div className="todo-form-grid">
-                <div className="todo-field">
-                  <label htmlFor="todo-title">
-                    Tiêu đề <span className="todo-field-req">*</span>
-                  </label>
-                  <input
-                    id="todo-title"
-                    name="title"
-                    type="text"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Ví dụ: Hoàn thành báo cáo quý..."
-                    disabled={isSubmitting}
-                    className={errors.title ? 'has-error' : ''}
-                    autoFocus
-                  />
-                  {errors.title && (
-                    <p className="todo-error-text">
-                      <AlertCircle size={14} /> {errors.title}
-                    </p>
-                  )}
-                </div>
-
-                <div className="todo-field">
-                  <label htmlFor="todo-due-date">
-                    Hạn hoàn thành <span className="todo-field-opt">(không bắt buộc)</span>
-                  </label>
-                  <input
-                    id="todo-due-date"
-                    type="date"
-                    value={dueDate}
-                    onChange={(event) => setDueDate(event.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div className="todo-field">
-                  <label htmlFor="todo-description">
-                    Mô tả chi tiết <span className="todo-field-opt">(không bắt buộc)</span>
-                  </label>
-                  <textarea
-                    id="todo-description"
-                    name="description"
-                    rows={3}
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                    placeholder="Nhập thông tin hoặc ghi chú bổ sung..."
-                    disabled={isSubmitting}
-                    className={errors.description ? 'has-error' : ''}
-                  />
-                  {errors.description && (
-                    <p className="todo-error-text">
-                      <AlertCircle size={14} /> {errors.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className="todo-create-actions">
-                  <button
-                    type="submit"
-                    className="todo-btn-submit"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Đang tạo...' : 'Tạo công việc'}
-                  </button>
-                  <button
-                    type="button"
-                    className="todo-btn-cancel"
-                    onClick={handleCancelCreate}
-                    disabled={isSubmitting}
-                  >
-                    Hủy
-                  </button>
-                </div>
-              </div>
-            </form>
-          </section>
+          <TodoCreateForm
+            onCreate={handleCreateTodo}
+            onClose={() => setIsCreateOpen(false)}
+            disabled={isLoading}
+          />
         )}
 
         {/* Toolbar: Search & Filter Tabs */}
