@@ -4,7 +4,6 @@ import {
   Plus,
   Check,
   Calendar,
-  Search,
   Pencil,
   Trash2,
   AlertCircle,
@@ -22,6 +21,7 @@ import { TodoCreateForm } from '../components/todo/TodoCreateForm';
 
 import { TodoToolbar } from '../components/todo/TodoToolbar';
 
+import { TodoItem } from '../components/todo/TodoItem';
 
 
 export const TodoApp = () => {
@@ -386,156 +386,26 @@ export const TodoApp = () => {
         ) : (
           <div className="todo-cards-list">
             {filteredList.map((item) => (
-              <article
+              <TodoItem
                 key={item.id}
-                className={`todo-card ${item.completed ? 'is-completed' : ''} ${isOverdue(item) ? 'is-overdue' : ''} ${editingId === item.id ? 'is-editing' : ''}`}
-              >
-                {editingId === item.id ? (
-                  /* Form chỉnh sửa trong card */
-                  <div className="todo-edit-form">
-                    <div className="todo-edit-header">
-                      Chỉnh sửa công việc
-                    </div>
-
-                    <div className="todo-edit-grid">
-                      <div className="todo-field">
-                        <label htmlFor={`edit-title-${item.id}`}>
-                          Tiêu đề <span className="todo-field-req">*</span>
-                        </label>
-                        <input
-                          id={`edit-title-${item.id}`}
-                          type="text"
-                          value={editTitle}
-                          onChange={(event) => setEditTitle(event.target.value)}
-                          placeholder="Nhập tiêu đề công việc"
-                          disabled={updatingId === item.id}
-                          className={editErrors.title ? 'has-error' : ''}
-                        />
-                        {editErrors.title && (
-                          <p className="todo-error-text">
-                            <AlertCircle size={14} /> {editErrors.title}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="todo-field">
-                        <label htmlFor={`edit-due-date-${item.id}`}>
-                          Hạn hoàn thành
-                        </label>
-                        <input
-                          id={`edit-due-date-${item.id}`}
-                          type="date"
-                          value={editDueDate}
-                          onChange={(event) => setEditDueDate(event.target.value)}
-                          disabled={updatingId === item.id}
-                        />
-                      </div>
-
-                      <div className="todo-field">
-                        <label htmlFor={`edit-description-${item.id}`}>
-                          Mô tả
-                        </label>
-                        <textarea
-                          id={`edit-description-${item.id}`}
-                          rows={3}
-                          value={editDescription}
-                          onChange={(event) => setEditDescription(event.target.value)}
-                          placeholder="Nhập mô tả"
-                          disabled={updatingId === item.id}
-                          className={editErrors.description ? 'has-error' : ''}
-                        />
-                        {editErrors.description && (
-                          <p className="todo-error-text">
-                            <AlertCircle size={14} /> {editErrors.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="todo-edit-actions">
-                        <button
-                          type="button"
-                          className="todo-btn-save"
-                          onClick={() => handleSaveEdit(item.id)}
-                          disabled={updatingId === item.id}
-                        >
-                          {updatingId === item.id ? 'Đang lưu...' : 'Lưu thay đổi'}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="todo-btn-cancel"
-                          onClick={handleCancelEdit}
-                          disabled={updatingId === item.id}
-                        >
-                          Hủy
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* Hiển thị công việc bình thường */
-                  <>
-                    <button
-                      type="button"
-                      className={`todo-check-btn ${item.completed ? 'is-checked' : ''}`}
-                      onClick={() => handleToggleStatus(item, !item.completed)}
-                      disabled={updatingId === item.id}
-                      title={item.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
-                    >
-                      {item.completed && <Check size={13} />}
-                    </button>
-
-                    <div className="todo-card-main">
-                      <h3 className="todo-card-title">{item.title}</h3>
-
-                      {item.description && (
-                        <p className="todo-card-desc">{item.description}</p>
-                      )}
-
-                      <div className="todo-card-meta">
-                        {item.dueDate && (
-                          <span className={`todo-tag ${isOverdue(item) ? 'todo-tag-overdue' : 'todo-tag-date'}`}>
-                            {isOverdue(item) ? (
-                              <AlertCircle size={13} />
-                            ) : (
-                              <Calendar size={13} />
-                            )}
-                            <span>{isOverdue(item) ? 'Quá hạn: ' : 'Hạn: '}{formatDueDate(item.dueDate)}</span>
-                          </span>
-                        )}
-
-                        <span className={`todo-tag ${item.completed ? 'todo-tag-completed' : 'todo-tag-pending'}`}>
-                          {item.completed ? '✓ Đã hoàn thành' : '● Đang làm'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="todo-card-actions">
-                      <button
-                        type="button"
-                        className="todo-action-btn todo-action-edit"
-                        onClick={() => handleStartEdit(item)}
-                        disabled={updatingId !== null || deletingId !== null}
-                        title="Chỉnh sửa công việc"
-                      >
-                        <Pencil size={14} />
-                        <span>Sửa</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="todo-action-btn todo-action-delete"
-                        onClick={() => handleDelete(item.id)}
-                        disabled={updatingId !== null || deletingId !== null}
-                        title="Xóa công việc"
-                      >
-                        <Trash2 size={14} />
-                        <span>{deletingId === item.id ? 'Đang xóa...' : 'Xóa'}</span>
-                      </button>
-                    </div>
-                  </>
-                )}
-              </article>
+                item={item}
+                isEditing={editingId === item.id}
+                editTitle={editTitle}
+                editDescription={editDescription}
+                editDueDate={editDueDate}
+                editErrors={editErrors}
+                onEditTitleChange={setEditTitle}
+                onEditDescriptionChange={setEditDescription}
+                onEditDueDateChange={setEditDueDate}
+                isUpdating={updatingId === item.id}
+                isDeleting={deletingId === item.id}
+                isDisabledActions={updatingId !== null || deletingId !== null}
+                onStartEdit={() => handleStartEdit(item)}
+                onCancelEdit={handleCancelEdit}
+                onSaveEdit={() => handleSaveEdit(item.id)}
+                onToggleStatus={(completed) => handleToggleStatus(item, completed)}
+                onDelete={() => handleDelete(item.id)}
+              />
             ))}
           </div>
         )}
