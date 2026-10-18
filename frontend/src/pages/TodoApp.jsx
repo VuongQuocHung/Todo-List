@@ -31,9 +31,12 @@ export const TodoApp = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [keyword, setKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   // State form chỉnh sửa công việc
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState(null); // lưu id của công việc đang chọn
+
+  // lưu các giá trị tạm thời khi người dùng đang gõ trong form sửa
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
@@ -58,6 +61,12 @@ export const TodoApp = () => {
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
+  };
+
+  const matchesSearch = (todo) => {
+    return todo.title
+      .toLowerCase()
+      .includes(searchKeyword.toLowerCase());
   };
 
   const handleCreate = async (event) => {
@@ -88,7 +97,12 @@ export const TodoApp = () => {
         throw new Error(result?.error?.message || 'Không tạo được công việc');
       }
 
-      setTodoList((currentList) => [result.data, ...currentList]);
+      if (matchesSearch(result.data)) {
+        setTodoList((currentList) => [
+          result.data,
+          ...currentList,
+        ]);
+      }
 
       setTitle('');
       setDescription('');
@@ -143,7 +157,9 @@ export const TodoApp = () => {
       }
 
       setTodoList((currentList) =>
-        currentList.map((item) => (item.id === id ? result.data : item))
+        currentList
+          .map((item) => item.id === id ? result.data : item)
+          .filter((item) => matchesSearch(item))
       );
 
       return true;
@@ -242,12 +258,31 @@ export const TodoApp = () => {
     }
   };
 
+  const handleSearch = (event) => {
+    event.preventDefault();
+
+    handleCancelEdit();
+    setSearchKeyword(keyword.trim());
+  };
+
+  const handleClearSearch = () => {
+    setKeyword('');
+    setSearchKeyword('');
+  };
+
   useEffect(() => {
     let ignore = false;
 
     const loadTodos = async () => {
+      setIsLoading(true);
+      setLoadError('');
+
       try {
-        const response = await fetch('/api/todos', {
+        const params = new URLSearchParams({
+          keyword: searchKeyword,
+        });
+
+        const response = await fetch(`/api/todos?${params.toString()}`, {
           credentials: 'include',
         });
 
@@ -262,6 +297,7 @@ export const TodoApp = () => {
         }
       } catch (error) {
         if (!ignore) {
+          setTodoList([]);
           setLoadError(error.message);
         }
       } finally {
@@ -276,11 +312,7 @@ export const TodoApp = () => {
     return () => {
       ignore = true;
     };
-  }, []);
-
-  const filteredTodos = todoList.filter((item) =>
-    item.title.toLowerCase().includes(keyword.trim().toLowerCase())
-  );
+  }, [searchKeyword]);
 
   return (
     <main className="todo">
@@ -343,14 +375,37 @@ export const TodoApp = () => {
         <h2>Danh sách công việc</h2>
 
         <div className="register-field">
-          <label htmlFor="todo-search">Tìm công việc</label>
-          <input
-            id="todo-search"
-            type="search"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder="Nhập tiêu đề cần tìm..."
-          />
+          <form
+            className="todo-search"
+            onSubmit={handleSearch}
+          >
+            <label htmlFor="todo-search">
+              Tìm công việc
+            </label>
+
+            <input
+              id="todo-search"
+              type="search"
+              value={keyword}
+              onChange={(event) =>
+                setKeyword(event.target.value)
+              }
+              placeholder="Nhập tiêu đề cần tìm..."
+            />
+
+            <button type="submit">
+              Tìm kiếm
+            </button>
+
+            {searchKeyword && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+              >
+                Xóa tìm kiếm
+              </button>
+            )}
+          </form>
         </div>
 
         {isLoading ? (
@@ -359,15 +414,15 @@ export const TodoApp = () => {
           <p role="alert" className="register-field-error">{loadError}</p>
         ) : (
           <>
-            {filteredTodos.length === 0 && (
+            {todoList.length === 0 && (
               <p>
-                {keyword.trim()
+                {searchKeyword
                   ? 'Không tìm thấy công việc phù hợp.'
                   : 'Chưa có công việc nào.'}
               </p>
             )}
 
-            {filteredTodos.map((item) => (
+            {todoList.map((item) => (
               <article
                 key={item.id}
                 className={`todo-card ${editingId === item.id ? 'is-editing' : ''}`}

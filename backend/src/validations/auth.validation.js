@@ -21,6 +21,7 @@ const registerSchema = z.object({
   email: z
     .string()
     .trim()
+    .toLowerCase()
     .min(1, 'Email không được để trống')
     .email('Email không hợp lệ')
     .max(255, 'Email không được vượt quá 255 ký tự'),

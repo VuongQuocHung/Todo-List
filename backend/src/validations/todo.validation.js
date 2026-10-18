@@ -11,6 +11,7 @@ const createSchema = z.object({
     .string()
     .trim()
     .max(2000, 'Mô tả không được vượt quá 2.000 ký tự')
+    .nullable()
     .optional(),
   dueDate: z
   .iso.date('Hạn hoàn thành phải là ngày hợp lệ')
@@ -58,6 +59,14 @@ const updateTodoSchema = z
     (data) => Object.keys(data).length > 0,
     'Cần ít nhất một thông tin để cập nhật'
   );
+
+const searchQuerySchema = z.object({
+  keyword: z
+    .string()
+    .trim()
+    .max(100, 'Từ khóa không được vượt quá 100 ký tự')
+    .default(''),
+}).strict();
 
 module.exports.updateStatus = (req, res, next) => {
   const isValidId = /^[1-9]\d{0,19}$/.test(req.params.id);
@@ -141,5 +150,24 @@ module.exports.deleteTodo = (req, res, next) => {
       },
     });
   }
+  next();
+};
+
+module.exports.searchTodo = (req, res, next) => {
+  const result = searchQuerySchema.safeParse(req.query);
+
+  if (!result.success) {
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: result.error.issues[0].message,
+      },
+    });
+  }
+
+  req.keywordSearch = result.data.keyword;
+  console.log("chay vao todo validation:\n");
+  console.log("req.keyword:", req.keywordSearch);
+
   next();
 };

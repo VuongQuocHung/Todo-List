@@ -29,7 +29,8 @@ module.exports.createTodo = async (userId, title, description, completed, dueDat
   }
 }
 
-module.exports.findTodosByUserId = async (userId) => {
+module.exports.findTodosByUserId = async (userId, keyword) => {
+  const keywordSearch = `%${keyword}%`;
   const [rows] = await pool.execute(
     `select id,
       title,
@@ -39,9 +40,9 @@ module.exports.findTodosByUserId = async (userId) => {
       created_at AS createdAt,
       updated_at AS updatedAt
     from todos 
-    where user_id = ?
+    where user_id = ? and title like ?
     order by created_at desc, id desc`,
-    [userId]
+    [userId, keywordSearch]
   );
   
   return rows.map((todo) => ({

@@ -7,8 +7,6 @@ const todoValidation = require('../validations/todo.validation');
 
 router.post('/', authMiddleware.requireAuth, todoValidation.createPost, todoController.createPost);
 
-router.get('/', authMiddleware.requireAuth, todoController.getList);
-
 router.patch('/:id', authMiddleware.requireAuth, todoValidation.updateTodo, todoController.updateTodo);
 
 router.delete(
@@ -16,6 +14,13 @@ router.delete(
   authMiddleware.requireAuth,
   todoValidation.deleteTodo,
   todoController.deleteTodo
+);
+
+router.get(
+  '/',
+  authMiddleware.requireAuth,
+  todoValidation.searchTodo,
+  todoController.getList
 );
 
 module.exports = router;

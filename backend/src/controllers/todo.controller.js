@@ -16,9 +16,14 @@ module.exports.createPost = async (req, res, next) => {
 
 module.exports.getList = async (req, res, next) => {
   try {
-    const userId = req.auth.userId;
+    // console.log("Chay vao controller getList");
+    // console.log(req.auth);
+    // console.log(req.keywordSearch);
 
-    const todos = await todoService.getTodos(userId);
+    const userId = req.auth.userId;
+    const keyword = req.keywordSearch;
+    
+    const todos = await todoService.getTodos(userId, keyword);
 
     return res.status(200).json({
       data: todos,

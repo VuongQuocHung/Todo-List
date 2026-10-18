@@ -23,8 +23,8 @@ module.exports.createPost = async (userId, { title, description, dueDate }) => {
   return todo;
 };
 
-module.exports.getTodos = async (userId) => {
-  return todoRepository.findTodosByUserId(userId);
+module.exports.getTodos = async (userId, keyword) => {
+  return todoRepository.findTodosByUserId(userId, keyword);
 }
 
 module.exports.updateStatus = async (userId, todoId, completed) => {

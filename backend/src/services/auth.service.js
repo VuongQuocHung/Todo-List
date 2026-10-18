@@ -37,17 +37,14 @@ module.exports.registerUser = async ({
   email,
   password,
 }) => {
-  const normalizedUsername = username.trim()
-  const normalizedFullname = fullname?.trim() || null;
-  const normalizedEmail = email.trim().toLowerCase();
 
-  const existingUsername = await userRepository.findUserByUsername(normalizedUsername);
+  const existingUsername = await userRepository.findUserByUsername(username);
 
   if (existingUsername) {
     throw createUsernameExistsError();
   }
 
-  const existingUser = await userRepository.findUserByEmail(normalizedEmail);
+  const existingUser = await userRepository.findUserByEmail(email);
 
   if (existingUser) {
     throw createEmailExistsError();
