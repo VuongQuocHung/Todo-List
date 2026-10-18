@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+  Plus,
+  X,
+  Check,
+  Calendar,
+  Search,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  ClipboardCheck,
+} from "lucide-react";
 
 const vnDateFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Ho_Chi_Minh',
@@ -19,6 +30,9 @@ const formatDueDate = (dateStr) => {
 };
 
 export const TodoApp = () => {
+  // State hiển thị toggle đóng/mở
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
   // State form tạo công việc
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -30,19 +44,20 @@ export const TodoApp = () => {
   const [todoList, setTodoList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+
+  // State lọc
   const [keyword, setKeyword] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'pending' | 'completed' | 'overdue'
 
   // State form chỉnh sửa công việc
-  const [editingId, setEditingId] = useState(null); // lưu id của công việc đang chọn
-
-  // lưu các giá trị tạm thời khi người dùng đang gõ trong form sửa
+  const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
   const [editErrors, setEditErrors] = useState({});
 
-  // State theo dõi tiến trình
+  // State theo dõi tiến trình cập nhật/xóa
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -67,6 +82,21 @@ export const TodoApp = () => {
     return todo.title
       .toLowerCase()
       .includes(searchKeyword.toLowerCase());
+  };
+
+  const handleToggleCreate = () => { // Bật tắt form tạo công việc
+    setIsCreateOpen((prev) => !prev); // đang đóng thì bấm sẽ mở, đang mở thì bấm sẽ đóng lại.
+    if (isCreateOpen) {
+      setErrors({});
+    }
+  };
+
+  const handleCancelCreate = () => { // Hủy tạo công việc
+    setIsCreateOpen(false);
+    setTitle('');
+    setDescription('');
+    setDueDate('');
+    setErrors({});
   };
 
   const handleCreate = async (event) => {
@@ -108,6 +138,7 @@ export const TodoApp = () => {
       setDescription('');
       setDueDate('');
       setErrors({});
+      setIsCreateOpen(false); // Đóng form sau khi tạo thành công
 
       toast.success('Tạo công việc thành công');
     } catch (error) {
@@ -117,7 +148,7 @@ export const TodoApp = () => {
     }
   };
 
-  const handleStartEdit = (todo) => {
+  const handleStartEdit = (todo) => { // Chỉnh sửa một công việc đã có
     setEditingId(todo.id);
     setEditTitle(todo.title);
     setEditDescription(todo.description || '');
@@ -125,7 +156,7 @@ export const TodoApp = () => {
     setEditErrors({});
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = () => { // Hủy chỉnh sửa công việc
     setEditingId(null);
     setEditTitle('');
     setEditDescription('');
@@ -133,7 +164,7 @@ export const TodoApp = () => {
     setEditErrors({});
   };
 
-  const handleUpdateTodo = async (id, updateData) => {
+  const handleUpdateTodo = async (id, updateData) => { // Cập nhật dữ liệu công việc
     if (updatingId !== null) {
       return false;
     }
@@ -207,7 +238,7 @@ export const TodoApp = () => {
   const handleToggleStatus = async (item, completed) => {
     const isSuccess = await handleUpdateTodo(item.id, { completed });
     if (isSuccess) {
-      toast.success('Cập nhật trạng thái thành công');
+      toast.success(completed ? 'Đã hoàn thành công việc' : 'Đã chuyển về chưa hoàn thành');
     }
   };
 
@@ -260,7 +291,6 @@ export const TodoApp = () => {
 
   const handleSearch = (event) => {
     event.preventDefault();
-
     handleCancelEdit();
     setSearchKeyword(keyword.trim());
   };
@@ -314,240 +344,451 @@ export const TodoApp = () => {
     };
   }, [searchKeyword]);
 
+  // Thống kê & Lọc danh sách
+  const totalCount = todoList.length;
+  const completedCount = todoList.filter((item) => item.completed).length;
+  const pendingCount = totalCount - completedCount;
+  const overdueCount = todoList.filter((item) => isOverdue(item)).length;
+  const percentDone = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  const filteredList = todoList.filter((item) => {
+    if (filterTab === 'pending') return !item.completed;
+    if (filterTab === 'completed') return item.completed;
+    if (filterTab === 'overdue') return isOverdue(item);
+    return true;
+  });
+
   return (
-    <main className="todo">
-      <h1>Công việc của tôi</h1>
+    <main className="todo-page">
+      <div className="todo-container">
+        <header className="todo-header">
+          <div className="todo-header-top">
+            <div className="todo-title-group">
+              <h1>Công việc của tôi</h1>
+              <p className="todo-subtitle">
+                {totalCount === 0
+                  ? 'Chưa có công việc nào cần làm'
+                  : `Đã hoàn thành ${completedCount}/${totalCount} công việc (${percentDone}%)`}
+              </p>
+            </div>
 
-      <form className="todo-form" onSubmit={handleCreate} noValidate>
-        <div className="register-field">
-          <label htmlFor="todo-title">Tiêu đề *</label>
-          <input
-            id="todo-title"
-            name="title"
-            type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Nhập tiêu đề công việc"
-            disabled={isSubmitting}
-          />
-          {errors.title && (
-            <p className="register-field-error">{errors.title}</p>
-          )}
-        </div>
-
-        <div className="register-field">
-          <label htmlFor="todo-due-date">Hạn hoàn thành (không bắt buộc)</label>
-          <input
-            id="todo-due-date"
-            type="date"
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div className="register-field">
-          <label htmlFor="todo-description">Mô tả (không bắt buộc)</label>
-          <textarea
-            id="todo-description"
-            name="description"
-            rows={4}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Nhập mô tả công việc"
-            disabled={isSubmitting}
-          />
-          {errors.description && (
-            <p className="register-field-error">{errors.description}</p>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          className="register-submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Đang tạo...' : 'Tạo công việc'}
-        </button>
-      </form>
-
-      <section className="todo__list">
-        <h2>Danh sách công việc</h2>
-
-        <div className="register-field">
-          <form
-            className="todo-search"
-            onSubmit={handleSearch}
-          >
-            <label htmlFor="todo-search">
-              Tìm công việc
-            </label>
-
-            <input
-              id="todo-search"
-              type="search"
-              value={keyword}
-              onChange={(event) =>
-                setKeyword(event.target.value)
-              }
-              placeholder="Nhập tiêu đề cần tìm..."
-            />
-
-            <button type="submit">
-              Tìm kiếm
+            {/* Nút bấm chuyển đổi trạng thái (Toggle Button) dùng để mở hoặc thu gọn form tạo công việc. */}
+            <button
+              type="button"
+              className={`todo-btn-toggle ${isCreateOpen ? 'todo-btn-toggle--close' : 'todo-btn-toggle--open'}`}
+              onClick={handleToggleCreate}
+            >
+              {isCreateOpen ? (
+                <>
+                  <X size={16} />
+                  <span>Đóng form</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  <span>Thêm công việc</span>
+                </>
+              )}
             </button>
+          </div>
 
-            {searchKeyword && (
+          {totalCount > 0 && (
+            <div className="todo-stats-bar">
+              <div className="todo-progress-track">
+                <div
+                  className="todo-progress-fill"
+                  style={{ width: `${percentDone}%` }}
+                />
+              </div>
+              <span className="todo-stats-text">
+                {percentDone}% hoàn thành
+              </span>
+            </div>
+          )}
+        </header>
+
+        {/* Form tạo công việc mới */}
+        {isCreateOpen && (
+          <section className="todo-create-card">
+            <div className="todo-create-header">
+              <div className="todo-create-title">
+                <span className="todo-create-icon">
+                  <Plus size={16} />
+                </span>
+                <span>Thêm công việc mới</span>
+              </div>
               <button
                 type="button"
-                onClick={handleClearSearch}
+                className="todo-icon-btn-close"
+                onClick={handleCancelCreate}
+                title="Đóng form"
               >
-                Xóa tìm kiếm
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreate} noValidate>
+              <div className="todo-form-grid">
+                <div className="todo-field">
+                  <label htmlFor="todo-title">
+                    Tiêu đề <span className="todo-field-req">*</span>
+                  </label>
+                  <input
+                    id="todo-title"
+                    name="title"
+                    type="text"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Ví dụ: Hoàn thành báo cáo quý..."
+                    disabled={isSubmitting}
+                    className={errors.title ? 'has-error' : ''}
+                    autoFocus
+                  />
+                  {errors.title && (
+                    <p className="todo-error-text">
+                      <AlertCircle size={14} /> {errors.title}
+                    </p>
+                  )}
+                </div>
+
+                <div className="todo-field">
+                  <label htmlFor="todo-due-date">
+                    Hạn hoàn thành <span className="todo-field-opt">(không bắt buộc)</span>
+                  </label>
+                  <input
+                    id="todo-due-date"
+                    type="date"
+                    value={dueDate}
+                    onChange={(event) => setDueDate(event.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="todo-field">
+                  <label htmlFor="todo-description">
+                    Mô tả chi tiết <span className="todo-field-opt">(không bắt buộc)</span>
+                  </label>
+                  <textarea
+                    id="todo-description"
+                    name="description"
+                    rows={3}
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder="Nhập thông tin hoặc ghi chú bổ sung..."
+                    disabled={isSubmitting}
+                    className={errors.description ? 'has-error' : ''}
+                  />
+                  {errors.description && (
+                    <p className="todo-error-text">
+                      <AlertCircle size={14} /> {errors.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="todo-create-actions">
+                  <button
+                    type="submit"
+                    className="todo-btn-submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Đang tạo...' : 'Tạo công việc'}
+                  </button>
+                  <button
+                    type="button"
+                    className="todo-btn-cancel"
+                    onClick={handleCancelCreate}
+                    disabled={isSubmitting}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* Toolbar: Search & Filter Tabs */}
+        <section className="todo-toolbar">
+          <form className="todo-search-bar" onSubmit={handleSearch}>
+            <div className="todo-search-input-wrap">
+              <span className="todo-search-icon">
+                <Search size={16} />
+              </span>
+              <input
+                id="todo-search"
+                className="todo-search-input"
+                type="text"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder="Tìm theo tiêu đề công việc..."
+              />
+              {keyword && (
+                <button
+                  type="button"
+                  className="todo-search-clear"
+                  onClick={handleClearSearch}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <button type="submit" className="todo-btn-search">
+              Tìm kiếm
+            </button>
+          </form>
+
+          <div className="todo-filter-tabs">
+            <button
+              type="button"
+              className={`todo-filter-tab ${filterTab === 'all' ? 'is-active' : ''}`}
+              onClick={() => setFilterTab('all')}
+            >
+              Tất cả
+              <span className="todo-tab-count">{totalCount}</span>
+            </button>
+            <button
+              type="button"
+              className={`todo-filter-tab ${filterTab === 'pending' ? 'is-active' : ''}`}
+              onClick={() => setFilterTab('pending')}
+            >
+              Chưa hoàn thành
+              <span className="todo-tab-count">{pendingCount}</span>
+            </button>
+            <button
+              type="button"
+              className={`todo-filter-tab ${filterTab === 'completed' ? 'is-active' : ''}`}
+              onClick={() => setFilterTab('completed')}
+            >
+              Đã hoàn thành
+              <span className="todo-tab-count">{completedCount}</span>
+            </button>
+            {overdueCount > 0 && (
+              <button
+                type="button"
+                className={`todo-filter-tab ${filterTab === 'overdue' ? 'is-active' : ''}`}
+                onClick={() => setFilterTab('overdue')}
+              >
+                Quá hạn
+                <span className="todo-tab-count" style={{ background: filterTab === 'overdue' ? 'rgba(255,255,255,0.3)' : '#fee2e2', color: filterTab === 'overdue' ? '#fff' : '#dc2626' }}>
+                  {overdueCount}
+                </span>
               </button>
             )}
-          </form>
-        </div>
+          </div>
+        </section>
+
+        {/* Main Todo List Area */}
+        {loadError && (
+          <div className="todo-error-banner">
+            <AlertCircle size={16} />
+            <span>{loadError}</span>
+          </div>
+        )}
 
         {isLoading ? (
-          <p>Đang tải công việc...</p>
-        ) : loadError ? (
-          <p role="alert" className="register-field-error">{loadError}</p>
+          <div className="todo-skeleton-list">
+            <div className="todo-skeleton-card"></div>
+            <div className="todo-skeleton-card"></div>
+            <div className="todo-skeleton-card"></div>
+          </div>
+        ) : filteredList.length === 0 ? (
+          <div className="todo-state-box">
+            <div className="todo-state-icon">
+              <ClipboardCheck size={28} />
+            </div>
+            <h3 className="todo-state-title">
+              {searchKeyword
+                ? 'Không tìm thấy công việc phù hợp'
+                : filterTab === 'completed'
+                  ? 'Chưa có công việc nào hoàn thành'
+                  : filterTab === 'pending'
+                    ? 'Không có công việc nào đang chờ'
+                    : filterTab === 'overdue'
+                      ? 'Tuyệt vời! Không có công việc nào quá hạn'
+                      : 'Chưa có công việc nào'}
+            </h3>
+            <p className="todo-state-desc">
+              {searchKeyword
+                ? `Không có kết quả cho từ khóa "${searchKeyword}". Thử tìm kiếm với từ khóa khác.`
+                : 'Hãy thêm các mục tiêu và kế hoạch cần làm để theo dõi tiến độ mỗi ngày.'}
+            </p>
+            <div className="todo-state-action">
+              {searchKeyword ? (
+                <button
+                  type="button"
+                  className="todo-btn-cancel"
+                  onClick={handleClearSearch}
+                >
+                  Xóa tìm kiếm
+                </button>
+              ) : !isCreateOpen ? (
+                <button
+                  type="button"
+                  className="todo-btn-submit"
+                  onClick={() => setIsCreateOpen(true)}
+                >
+                  <Plus size={16} /> Thêm công việc ngay
+                </button>
+              ) : null}
+            </div>
+          </div>
         ) : (
-          <>
-            {todoList.length === 0 && (
-              <p>
-                {searchKeyword
-                  ? 'Không tìm thấy công việc phù hợp.'
-                  : 'Chưa có công việc nào.'}
-              </p>
-            )}
-
-            {todoList.map((item) => (
+          <div className="todo-cards-list">
+            {filteredList.map((item) => (
               <article
                 key={item.id}
-                className={`todo-card ${editingId === item.id ? 'is-editing' : ''}`}
+                className={`todo-card ${item.completed ? 'is-completed' : ''} ${isOverdue(item) ? 'is-overdue' : ''} ${editingId === item.id ? 'is-editing' : ''}`}
               >
                 {editingId === item.id ? (
+                  /* Form chỉnh sửa trong card */
                   <div className="todo-edit-form">
-                    <h4>Chỉnh sửa công việc</h4>
-
-                    <div className="register-field">
-                      <label htmlFor={`edit-title-${item.id}`}>Tiêu đề *</label>
-                      <input
-                        id={`edit-title-${item.id}`}
-                        type="text"
-                        value={editTitle}
-                        onChange={(event) => setEditTitle(event.target.value)}
-                        placeholder="Nhập tiêu đề"
-                        disabled={updatingId === item.id}
-                      />
-                      {editErrors.title && (
-                        <p className="register-field-error">{editErrors.title}</p>
-                      )}
+                    <div className="todo-edit-header">
+                      Chỉnh sửa công việc
                     </div>
 
-                    <div className="register-field">
-                      <label htmlFor={`edit-due-date-${item.id}`}>Hạn hoàn thành</label>
-                      <input
-                        id={`edit-due-date-${item.id}`}
-                        type="date"
-                        value={editDueDate}
-                        onChange={(event) => setEditDueDate(event.target.value)}
-                        disabled={updatingId === item.id}
-                      />
-                    </div>
+                    <div className="todo-edit-grid">
+                      <div className="todo-field">
+                        <label htmlFor={`edit-title-${item.id}`}>
+                          Tiêu đề <span className="todo-field-req">*</span>
+                        </label>
+                        <input
+                          id={`edit-title-${item.id}`}
+                          type="text"
+                          value={editTitle}
+                          onChange={(event) => setEditTitle(event.target.value)}
+                          placeholder="Nhập tiêu đề công việc"
+                          disabled={updatingId === item.id}
+                          className={editErrors.title ? 'has-error' : ''}
+                        />
+                        {editErrors.title && (
+                          <p className="todo-error-text">
+                            <AlertCircle size={14} /> {editErrors.title}
+                          </p>
+                        )}
+                      </div>
 
-                    <div className="register-field">
-                      <label htmlFor={`edit-description-${item.id}`}>Mô tả</label>
-                      <textarea
-                        id={`edit-description-${item.id}`}
-                        rows={3}
-                        value={editDescription}
-                        onChange={(event) => setEditDescription(event.target.value)}
-                        placeholder="Nhập mô tả"
-                        disabled={updatingId === item.id}
-                      />
-                      {editErrors.description && (
-                        <p className="register-field-error">{editErrors.description}</p>
-                      )}
-                    </div>
+                      <div className="todo-field">
+                        <label htmlFor={`edit-due-date-${item.id}`}>
+                          Hạn hoàn thành
+                        </label>
+                        <input
+                          id={`edit-due-date-${item.id}`}
+                          type="date"
+                          value={editDueDate}
+                          onChange={(event) => setEditDueDate(event.target.value)}
+                          disabled={updatingId === item.id}
+                        />
+                      </div>
 
-                    <div className="todo-edit-actions">
-                      <button
-                        type="button"
-                        className="todo-btn todo-btn-save"
-                        onClick={() => handleSaveEdit(item.id)}
-                        disabled={updatingId === item.id}
-                      >
-                        {updatingId === item.id ? 'Đang lưu...' : 'Lưu thay đổi'}
-                      </button>
+                      <div className="todo-field">
+                        <label htmlFor={`edit-description-${item.id}`}>
+                          Mô tả
+                        </label>
+                        <textarea
+                          id={`edit-description-${item.id}`}
+                          rows={3}
+                          value={editDescription}
+                          onChange={(event) => setEditDescription(event.target.value)}
+                          placeholder="Nhập mô tả"
+                          disabled={updatingId === item.id}
+                          className={editErrors.description ? 'has-error' : ''}
+                        />
+                        {editErrors.description && (
+                          <p className="todo-error-text">
+                            <AlertCircle size={14} /> {editErrors.description}
+                          </p>
+                        )}
+                      </div>
 
-                      <button
-                        type="button"
-                        className="todo-btn todo-btn-cancel"
-                        onClick={handleCancelEdit}
-                        disabled={updatingId === item.id}
-                      >
-                        Hủy
-                      </button>
+                      <div className="todo-edit-actions">
+                        <button
+                          type="button"
+                          className="todo-btn-save"
+                          onClick={() => handleSaveEdit(item.id)}
+                          disabled={updatingId === item.id}
+                        >
+                          {updatingId === item.id ? 'Đang lưu...' : 'Lưu thay đổi'}
+                        </button>
+
+                        <button
+                          type="button"
+                          className="todo-btn-cancel"
+                          onClick={handleCancelEdit}
+                          disabled={updatingId === item.id}
+                        >
+                          Hủy
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
+                  /* Hiển thị công việc bình thường */
                   <>
-                    <h3>{item.title}</h3>
+                    <button
+                      type="button"
+                      className={`todo-check-btn ${item.completed ? 'is-checked' : ''}`}
+                      onClick={() => handleToggleStatus(item, !item.completed)}
+                      disabled={updatingId === item.id}
+                      title={item.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
+                    >
+                      {item.completed && <Check size={13} />}
+                    </button>
 
-                    {item.description && <p>{item.description}</p>}
+                    <div className="todo-card-main">
+                      <h3 className="todo-card-title">{item.title}</h3>
 
-                    <p>
-                      Hạn hoàn thành:{' '}
-                      {item.dueDate ? formatDueDate(item.dueDate) : 'Chưa đặt hạn'}
-                      {isOverdue(item) && (
-                        <strong style={{ color: '#dc2626' }}> — Quá hạn</strong>
+                      {item.description && (
+                        <p className="todo-card-desc">{item.description}</p>
                       )}
-                    </p>
+
+                      <div className="todo-card-meta">
+                        {item.dueDate && (
+                          <span className={`todo-tag ${isOverdue(item) ? 'todo-tag-overdue' : 'todo-tag-date'}`}>
+                            {isOverdue(item) ? (
+                              <AlertCircle size={13} />
+                            ) : (
+                              <Calendar size={13} />
+                            )}
+                            <span>{isOverdue(item) ? 'Quá hạn: ' : 'Hạn: '}{formatDueDate(item.dueDate)}</span>
+                          </span>
+                        )}
+
+                        <span className={`todo-tag ${item.completed ? 'todo-tag-completed' : 'todo-tag-pending'}`}>
+                          {item.completed ? '✓ Đã hoàn thành' : '● Đang làm'}
+                        </span>
+                      </div>
+                    </div>
 
                     <div className="todo-card-actions">
-                      <label className="todo-status-label">
-                        Trạng thái:{' '}
-                        <select
-                          value={String(item.completed)}
-                          disabled={updatingId !== null}
-                          onChange={(event) =>
-                            handleToggleStatus(item, event.target.value === 'true')
-                          }
-                        >
-                          <option value="false">Chưa hoàn thành</option>
-                          <option value="true">Đã hoàn thành</option>
-                        </select>
-                      </label>
-
-                      {updatingId === item.id && <span> Đang lưu...</span>}
-
                       <button
                         type="button"
-                        className="todo-btn todo-btn-edit"
+                        className="todo-action-btn todo-action-edit"
                         onClick={() => handleStartEdit(item)}
                         disabled={updatingId !== null || deletingId !== null}
+                        title="Chỉnh sửa công việc"
                       >
-                        Sửa
+                        <Pencil size={14} />
+                        <span>Sửa</span>
                       </button>
 
                       <button
                         type="button"
-                        className="todo-btn todo-btn-delete"
+                        className="todo-action-btn todo-action-delete"
                         onClick={() => handleDelete(item.id)}
                         disabled={updatingId !== null || deletingId !== null}
+                        title="Xóa công việc"
                       >
-                        {deletingId === item.id ? 'Đang xóa...' : 'Xóa'}
+                        <Trash2 size={14} />
+                        <span>{deletingId === item.id ? 'Đang xóa...' : 'Xóa'}</span>
                       </button>
                     </div>
                   </>
                 )}
               </article>
             ))}
-          </>
+          </div>
         )}
-      </section>
+      </div>
     </main>
   );
 };
