@@ -20,6 +20,9 @@ import { TodoHeader } from '../components/todo/TodoHeader';
 
 import { TodoCreateForm } from '../components/todo/TodoCreateForm';
 
+import { TodoToolbar } from '../components/todo/TodoToolbar';
+
+
 
 export const TodoApp = () => {
   // State kiểm soát trạng thái Ẩn / Hiện (Đóng / Mở) của form tạo công việc mới
@@ -311,74 +314,19 @@ export const TodoApp = () => {
         )}
 
         {/* Toolbar: Search & Filter Tabs */}
-        <section className="todo-toolbar">
-          <form className="todo-search-bar" onSubmit={handleSearch}>
-            <div className="todo-search-input-wrap">
-              <span className="todo-search-icon">
-                <Search size={16} />
-              </span>
-              <input
-                id="todo-search"
-                className="todo-search-input"
-                type="text"
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder="Tìm theo tiêu đề công việc..."
-              />
-              {keyword && (
-                <button
-                  type="button"
-                  className="todo-search-clear"
-                  onClick={handleClearSearch}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <button type="submit" className="todo-btn-search">
-              Tìm kiếm
-            </button>
-          </form>
+        <TodoToolbar
+          keyword={keyword}
+          onKeywordChange={setKeyword}
+          onSearch={handleSearch}
+          onClearSearch={handleClearSearch}
+          filterTab={filterTab}
+          onFilterChange={setFilterTab}
+          totalCount={totalCount}
+          pendingCount={pendingCount}
+          completedCount={completedCount}
+          overdueCount={overdueCount}
+        />
 
-          <div className="todo-filter-tabs">
-            <button
-              type="button"
-              className={`todo-filter-tab ${filterTab === 'all' ? 'is-active' : ''}`}
-              onClick={() => setFilterTab('all')}
-            >
-              Tất cả
-              <span className="todo-tab-count">{totalCount}</span>
-            </button>
-            <button
-              type="button"
-              className={`todo-filter-tab ${filterTab === 'pending' ? 'is-active' : ''}`}
-              onClick={() => setFilterTab('pending')}
-            >
-              Chưa hoàn thành
-              <span className="todo-tab-count">{pendingCount}</span>
-            </button>
-            <button
-              type="button"
-              className={`todo-filter-tab ${filterTab === 'completed' ? 'is-active' : ''}`}
-              onClick={() => setFilterTab('completed')}
-            >
-              Đã hoàn thành
-              <span className="todo-tab-count">{completedCount}</span>
-            </button>
-            {overdueCount > 0 && (
-              <button
-                type="button"
-                className={`todo-filter-tab ${filterTab === 'overdue' ? 'is-active' : ''}`}
-                onClick={() => setFilterTab('overdue')}
-              >
-                Quá hạn
-                <span className="todo-tab-count" style={{ background: filterTab === 'overdue' ? 'rgba(255,255,255,0.3)' : '#fee2e2', color: filterTab === 'overdue' ? '#fff' : '#dc2626' }}>
-                  {overdueCount}
-                </span>
-              </button>
-            )}
-          </div>
-        </section>
 
         {/* Main Todo List Area */}
         {loadError && (
