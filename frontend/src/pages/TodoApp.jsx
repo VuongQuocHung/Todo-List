@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  Plus,
   AlertCircle,
-  ClipboardCheck,
 } from "lucide-react";
 
 import { TodoHeader } from '../components/todo/TodoHeader';
@@ -13,8 +11,14 @@ import { TodoCreateForm } from '../components/todo/TodoCreateForm';
 import { TodoToolbar } from '../components/todo/TodoToolbar';
 
 import { TodoItem } from '../components/todo/TodoItem';
+
 import { TodoPagination } from '../components/todo/TodoPagination';
 
+import { TodoErrorBanner } from '../components/todo/TodoErrorBanner';
+
+import { TodoSkeletonList } from '../components/todo/TodoSkeletonList';
+
+import { TodoEmptyState } from '../components/todo/TodoEmptyState';
 
 export const TodoApp = () => {
   // State kiểm soát trạng thái Ẩn / Hiện (Đóng / Mở) của form tạo công việc mới
@@ -329,62 +333,19 @@ export const TodoApp = () => {
           overdueCount={overdueCount}
         />
 
-
         {/* Main Todo List Area */}
-        {loadError && (
-          <div className="todo-error-banner">
-            <AlertCircle size={16} />
-            <span>{loadError}</span>
-          </div>
-        )}
+        <TodoErrorBanner message={loadError} />
 
         {isLoading ? (
-          <div className="todo-skeleton-list">
-            <div className="todo-skeleton-card"></div>
-            <div className="todo-skeleton-card"></div>
-            <div className="todo-skeleton-card"></div>
-          </div>
+          <TodoSkeletonList />
         ) : todoList.length === 0 ? (
-          <div className="todo-state-box">
-            <div className="todo-state-icon">
-              <ClipboardCheck size={28} />
-            </div>
-            <h3 className="todo-state-title">
-              {searchKeyword
-                ? 'Không tìm thấy công việc phù hợp'
-                : filterTab === 'completed'
-                  ? 'Chưa có công việc nào hoàn thành'
-                  : filterTab === 'pending'
-                    ? 'Không có công việc nào đang chờ'
-                    : filterTab === 'overdue'
-                      ? 'Tuyệt vời! Không có công việc nào quá hạn'
-                      : 'Chưa có công việc nào'}
-            </h3>
-            <p className="todo-state-desc">
-              {searchKeyword
-                ? `Không có kết quả cho từ khóa "${searchKeyword}". Thử tìm kiếm với từ khóa khác.`
-                : 'Hãy thêm các mục tiêu và kế hoạch cần làm để theo dõi tiến độ mỗi ngày.'}
-            </p>
-            <div className="todo-state-action">
-              {searchKeyword ? (
-                <button
-                  type="button"
-                  className="todo-btn-cancel"
-                  onClick={handleClearSearch}
-                >
-                  Xóa tìm kiếm
-                </button>
-              ) : !isCreateOpen ? (
-                <button
-                  type="button"
-                  className="todo-btn-submit"
-                  onClick={() => setIsCreateOpen(true)}
-                >
-                  <Plus size={16} /> Thêm công việc ngay
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <TodoEmptyState
+            searchKeyword={searchKeyword}
+            filterTab={filterTab}
+            showCreateButton={!isCreateOpen}
+            onClearSearch={handleClearSearch}
+            onCreate={() => setIsCreateOpen(true)}
+          />
         ) : (
           <>
             <div className="todo-cards-list">
