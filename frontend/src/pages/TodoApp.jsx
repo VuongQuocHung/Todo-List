@@ -8,7 +8,9 @@ import { TodoHeader } from '../components/todo/TodoHeader';
 
 import { TodoCreateForm } from '../components/todo/TodoCreateForm';
 
-import { TodoToolbar } from '../components/todo/TodoToolbar';
+import { TodoSearchBar } from '../components/todo/TodoSearchBar';
+import { TodoFilterTabs } from '../components/todo/TodoFilterTabs';
+
 
 import { TodoItem } from '../components/todo/TodoItem';
 
@@ -188,8 +190,7 @@ export const TodoApp = () => {
     }
   };
 
-  const handleSearch = (event) => {
-    event.preventDefault();
+  const handleSearch = () => {
     handleCancelEdit();
     setSearchKeyword(keyword.trim());
     setCurrentPage(1);
@@ -231,8 +232,6 @@ export const TodoApp = () => {
   // Thống kê & Lọc danh sách
   const totalCount = stats.all;
   const completedCount = stats.completed;
-  const pendingCount = stats.pending;
-  const overdueCount = stats.overdue;
   const percentDone = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const handlePageChange = (page) => {
@@ -317,21 +316,24 @@ export const TodoApp = () => {
         )}
 
         {/* Toolbar: Search & Filter Tabs */}
-        <TodoToolbar
-          keyword={keyword}
-          onKeywordChange={setKeyword}
-          onSearch={handleSearch}
-          onClearSearch={handleClearSearch}
-          filterTab={filterTab}
-          onFilterChange={(tab) => {
-            setFilterTab(tab);
-            setCurrentPage(1);
-          }}
-          totalCount={totalCount}
-          pendingCount={pendingCount}
-          completedCount={completedCount}
-          overdueCount={overdueCount}
-        />
+        {/* Toolbar: Tìm kiếm & Tab lọc */}
+        <section className="todo-toolbar">
+          <TodoSearchBar
+            keyword={keyword}
+            onKeywordChange={setKeyword}
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+          />
+          <TodoFilterTabs
+            filterTab={filterTab}
+            stats={stats}
+            onFilterChange={(tab) => {
+              setFilterTab(tab);
+              setCurrentPage(1);
+            }}
+          />
+        </section>
+
 
         {/* Main Todo List Area */}
         <TodoErrorBanner message={loadError} />
