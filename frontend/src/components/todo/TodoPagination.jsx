@@ -15,9 +15,9 @@ export const TodoPagination = ({
 
   for (let page = 1; page <= totalPages; page++) {
     const shouldShow =
-      totalPages <= 7 ||                     // Ít trang thì hiện tất cả
-      page === 1 ||                         // Luôn hiện trang đầu
-      page === totalPages ||                // Luôn hiện trang cuối
+      totalPages <= 7 || // Ít trang thì hiện tất cả
+      page === 1 ||      // Luôn hiện trang đầu
+      page === totalPages ||  // Luôn hiện trang cuối
       Math.abs(page - currentPage) <= 1;     // Hiện trang hiện tại và hai trang bên cạnh
 
     if (shouldShow) {

@@ -69,7 +69,7 @@ export const RegisterPage = () => {
         },
         body: JSON.stringify({
           username: username.trim(),
-          fullname: fullname.trim() || undefined,
+          fullname: fullname.trim() || null,
           email: email.trim(),
           password,
         }),

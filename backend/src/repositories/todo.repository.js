@@ -30,10 +30,12 @@ module.exports.createTodo = async (userId, title, description, completed, dueDat
   }
 }
 
-module.exports.findTodosByUserId = async (
-  userId,
-  { keyword, filterTab, limit, offset }
-) => {
+module.exports.findTodosByUserId = async (userId, { 
+  keyword, 
+  filterTab, 
+  limit, 
+  offset 
+}) => {
 
   const keywordSearch = `%${keyword}%`;
 
@@ -49,6 +51,7 @@ module.exports.findTodosByUserId = async (
     `,
   };
   const filterCondition = conditions[filterTab];
+  // console.log("filterCondition:", filterCondition);
 
   // Đếm mỗi tab trên toàn bộ kết quả tìm kiếm, không giới hạn theo trang.
   const stats = {};
@@ -94,47 +97,6 @@ module.exports.findTodosByUserId = async (
     todos,
     totalItems,
     stats,
-  };
-};
-
-module.exports.updateStatus = async (userId, todoId, completed) => {
-  await pool.execute(
-    `UPDATE todos
-    SET completed_date = case
-          when ? = false then null
-          when completed = false then date(utc_timestamp() + interval 7 hour)
-          else completed_date
-        end,
-        completed = ?
-    WHERE id = ? AND user_id = ?`,
-    [completed, completed, todoId, userId]
-  );
-
-  const [rows] = await pool.execute(
-    `select
-      id,
-      title,
-      description,
-      completed,
-      DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
-      date_format(completed_date, '%Y-%m-%d') as completedDate,
-      created_at as createdAt,
-      updated_at as updatedAt
-    from todos
-    where id = ? and user_id = ?
-    `,
-    [todoId, userId]
-  );
-
-  const todo = rows[0];
-
-  if (!todo) {
-    return null;
-  }
-
-  return {
-    ...todo,
-    completed: Boolean(todo.completed),
   };
 };
 

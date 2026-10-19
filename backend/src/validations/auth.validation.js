@@ -16,7 +16,8 @@ const registerSchema = z.object({
     .string()
     .trim()
     .max(100, 'Họ tên không được vượt quá 100 ký tự')
-    .optional(),
+    .optional()
+    .nullable(),
 
   email: z
     .string()

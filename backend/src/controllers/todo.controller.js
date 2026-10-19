@@ -25,27 +25,11 @@ module.exports.getList = async (req, res, next) => {
 
     const result  = await todoService.getTodos(userId, validatedQuery);
 
-    return res.status(200).json(result );
+    return res.status(200).json(result);
   } catch (error) {
     next(error);
   }
 };
-
-module.exports.updateStatus = async (req, res, next) => {
-  try {
-    const userId = req.auth.userId;
-    const todoId = req.params.id;
-    const completed = req.body.completed;
-
-    const todo = await todoService.updateStatus(userId, todoId, completed);
-
-    return res.status(200).json({
-      data: todo
-    })
-  } catch (error) {
-    next(error);
-  }
-}
 
 module.exports.updateTodo = async (req, res, next) => {
   try {

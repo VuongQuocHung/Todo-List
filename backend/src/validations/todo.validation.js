@@ -23,10 +23,6 @@ const createSchema = z.object({
   .optional(),
 }).strict();
 
-const updateStatusSchema = z.object({
-  completed: z.boolean(),
-}).strict();
-
 const updateTodoSchema = z
   .object({
     title: z
@@ -86,33 +82,6 @@ const listQuerySchema = z.object({
     .default('all'),
 }).strict();
 
-module.exports.updateStatus = (req, res, next) => {
-  const isValidId = /^[1-9]\d{0,19}$/.test(req.params.id);
-
-  if (!isValidId) {
-    return res.status(400).json({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'ID công việc không hợp lệ',
-      },
-    });
-  }
-
-  const result = updateStatusSchema.safeParse(req.body);
-
-  if (!result.success) {
-    return res.status(400).json({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: result.error.issues[0].message,
-      },
-    });
-  }
-
-  req.body = result.data;
-
-  next();
-};
 
 module.exports.updateTodo = (req, res, next) => {
   const isValidId = /^[1-9]\d{0,19}$/.test(req.params.id);
@@ -173,6 +142,7 @@ module.exports.deleteTodo = (req, res, next) => {
 
 module.exports.getList = (req, res, next) => {
   const result = listQuerySchema.safeParse(req.query);
+  console.log("result:", result);
 
   if (!result.success) {
     return res.status(400).json({
