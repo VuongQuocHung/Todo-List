@@ -55,9 +55,9 @@ module.exports.registerUser = async ({
 
   try {
     return await userRepository.createUser(
-      normalizedUsername,
-      normalizedFullname,
-      normalizedEmail,
+      username,
+      fullname,
+      email,
       passwordHash
     );
   } catch (error) {

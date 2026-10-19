@@ -48,7 +48,7 @@ export const TodoItem = ({
                 id={`edit-title-${item.id}`}
                 type="text"
                 value={editTitle}
-                onChange={(event) => setEditTitle(event.target.value)}
+                onChange={(event) => onEditTitleChange(event.target.value)}
                 placeholder="Nhập tiêu đề công việc"
                 disabled={isUpdating}
                 className={editErrors.title ? 'has-error' : ''}
@@ -120,7 +120,7 @@ export const TodoItem = ({
           <button
             type="button"
             className={`todo-check-btn ${item.completed ? 'is-checked' : ''}`}
-            onClick={() => onToggleStatus(item, !item.completed)}
+            onClick={() => onToggleStatus(!item.completed)}
             disabled={isUpdating}
             title={item.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
           >
@@ -142,7 +142,15 @@ export const TodoItem = ({
                   ) : (
                     <Calendar size={13} />
                   )}
-                  <span>{isOverdue(item) ? 'Quá hạn: ' : 'Hạn: '}{formatDueDate(item.dueDate)}</span>
+                  <span>{isOverdue(item) ? (item.completed ? 'Hoàn thành trễ — hạn: ' : 'Quá hạn: ') : 'Hạn: '}{formatDueDate(item.dueDate)}</span>
+                </span>
+              )}
+
+              {item.completed && (
+                <span className="todo-tag todo-tag-date">
+                  {item.completedDate
+                    ? `Hoàn thành: ${formatDueDate(item.completedDate)}`
+                    : 'Chưa có ngày hoàn thành'}
                 </span>
               )}
 

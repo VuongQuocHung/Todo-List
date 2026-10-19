@@ -60,12 +60,30 @@ const updateTodoSchema = z
     'Cần ít nhất một thông tin để cập nhật'
   );
 
-const searchQuerySchema = z.object({
+const listQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .min(1, 'Trang phải lớn hơn hoặc bằng 1')
+    .max(1000000, 'Số trang quá lớn')
+    .default(1),
+
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1, 'Mỗi trang phải có ít nhất 1 công việc')
+    .max(20, 'Mỗi trang tối đa 20 công việc')
+    .default(5),
+
   keyword: z
     .string()
     .trim()
-    .max(100, 'Từ khóa không được vượt quá 100 ký tự')
+    .max(100, 'Từ khóa tối đa 100 ký tự')
     .default(''),
+
+  filterTab: z
+    .enum(['all', 'pending', 'completed', 'overdue'])
+    .default('all'),
 }).strict();
 
 module.exports.updateStatus = (req, res, next) => {
@@ -153,8 +171,8 @@ module.exports.deleteTodo = (req, res, next) => {
   next();
 };
 
-module.exports.searchTodo = (req, res, next) => {
-  const result = searchQuerySchema.safeParse(req.query);
+module.exports.getList = (req, res, next) => {
+  const result = listQuerySchema.safeParse(req.query);
 
   if (!result.success) {
     return res.status(400).json({
@@ -165,9 +183,9 @@ module.exports.searchTodo = (req, res, next) => {
     });
   }
 
-  req.keywordSearch = result.data.keyword;
+  req.validatedQuery  = result.data;
   console.log("chay vao todo validation:\n");
-  console.log("req.keyword:", req.keywordSearch);
+  console.log("req.validatedQuery:", req.validatedQuery);
 
   next();
 };

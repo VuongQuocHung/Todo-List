@@ -19,7 +19,7 @@ router.delete(
 router.get(
   '/',
   authMiddleware.requireAuth,
-  todoValidation.searchTodo,
+  todoValidation.getList,
   todoController.getList
 );
 

@@ -2,18 +2,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Plus,
-  Check,
-  Calendar,
-  Pencil,
-  Trash2,
   AlertCircle,
   ClipboardCheck,
 } from "lucide-react";
-
-import {
-  formatDueDate,
-  isOverdue
-} from '../utils/todoDate';
 
 import { TodoHeader } from '../components/todo/TodoHeader';
 
@@ -22,6 +13,7 @@ import { TodoCreateForm } from '../components/todo/TodoCreateForm';
 import { TodoToolbar } from '../components/todo/TodoToolbar';
 
 import { TodoItem } from '../components/todo/TodoItem';
+import { TodoPagination } from '../components/todo/TodoPagination';
 
 
 export const TodoApp = () => {
@@ -38,6 +30,18 @@ export const TodoApp = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterTab, setFilterTab] = useState('all'); // 'all' | 'pending' | 'completed' | 'overdue'
 
+  // State phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0); // Tín hiệu tải lại sau khi tạo/sửa/xóa
+
+  const [stats, setStats] = useState({
+    all: 0,
+    pending: 0,
+    completed: 0,
+    overdue: 0,
+  }); // Số công việc của từng trạng thái trên mọi trang, theo từ khóa tìm kiếm
+
   // State form chỉnh sửa công việc
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -49,12 +53,6 @@ export const TodoApp = () => {
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-
-  const matchesSearch = (todo) => {
-    return todo.title
-      .toLowerCase()
-      .includes(searchKeyword.toLowerCase());
-  };
 
   const handleToggleCreate = () => { // Bật tắt form tạo công việc
     setIsCreateOpen((prev) => !prev); // đang đóng thì bấm sẽ mở, đang mở thì bấm sẽ đóng lại.
@@ -99,11 +97,7 @@ export const TodoApp = () => {
         throw new Error(result?.error?.message || 'Không cập nhật được công việc');
       }
 
-      setTodoList((currentList) =>
-        currentList
-          .map((item) => item.id === id ? result.data : item)
-          .filter((item) => matchesSearch(item))
-      );
+      setReloadKey((value) => value + 1);
 
       return true;
     } catch (error) {
@@ -176,9 +170,7 @@ export const TodoApp = () => {
         throw new Error(result?.error?.message || 'Không xóa được công việc');
       }
 
-      setTodoList((currentList) =>
-        currentList.filter((item) => item.id !== id)
-      );
+      setReloadKey((value) => value + 1);
 
       if (editingId === id) {
         handleCancelEdit();
@@ -196,11 +188,13 @@ export const TodoApp = () => {
     event.preventDefault();
     handleCancelEdit();
     setSearchKeyword(keyword.trim());
+    setCurrentPage(1);
   };
 
   const handleClearSearch = () => {
     setKeyword('');
     setSearchKeyword('');
+    setCurrentPage(1);
   };
 
   const handleCreateTodo = async (todoData) => {
@@ -224,14 +218,22 @@ export const TodoApp = () => {
 
     const newTodo = result.data;
 
-    if (matchesSearch(newTodo)) {
-      setTodoList((currentList) => [
-        newTodo,
-        ...currentList,
-      ]);
-    }
+    setCurrentPage(1);
+    setReloadKey((value) => value + 1);
 
     return newTodo;
+  };
+
+  // Thống kê & Lọc danh sách
+  const totalCount = stats.all;
+  const completedCount = stats.completed;
+  const pendingCount = stats.pending;
+  const overdueCount = stats.overdue;
+  const percentDone = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  const handlePageChange = (page) => {
+    handleCancelEdit(); // đóng form sửa trước khi chuyển trang.
+    setCurrentPage(page);
   };
 
   useEffect(() => {
@@ -244,6 +246,9 @@ export const TodoApp = () => {
       try {
         const params = new URLSearchParams({
           keyword: searchKeyword,
+          page: String(currentPage),
+          limit: '5',
+          filterTab,
         });
 
         const response = await fetch(`/api/todos?${params.toString()}`, {
@@ -257,7 +262,14 @@ export const TodoApp = () => {
         }
 
         if (!ignore) {
-          setTodoList(result.data || []);
+          setTodoList(result.data);
+          setTotalPages(result.pagination.totalPages);
+          setStats(result.stats);
+          // Xóa/sửa phần tử cuối của trang có thể làm giảm tổng số trang.
+          const lastPage = Math.max(1, result.pagination.totalPages);
+          if (currentPage > lastPage) {
+            setCurrentPage(lastPage);
+          }
         }
       } catch (error) {
         if (!ignore) {
@@ -276,21 +288,8 @@ export const TodoApp = () => {
     return () => {
       ignore = true;
     };
-  }, [searchKeyword]);
+  }, [searchKeyword, currentPage, filterTab, reloadKey]);
 
-  // Thống kê & Lọc danh sách
-  const totalCount = todoList.length;
-  const completedCount = todoList.filter((item) => item.completed).length;
-  const pendingCount = totalCount - completedCount;
-  const overdueCount = todoList.filter((item) => isOverdue(item)).length;
-  const percentDone = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-  const filteredList = todoList.filter((item) => {
-    if (filterTab === 'pending') return !item.completed;
-    if (filterTab === 'completed') return item.completed;
-    if (filterTab === 'overdue') return isOverdue(item);
-    return true;
-  });
 
   return (
     <main className="todo-page">
@@ -320,7 +319,10 @@ export const TodoApp = () => {
           onSearch={handleSearch}
           onClearSearch={handleClearSearch}
           filterTab={filterTab}
-          onFilterChange={setFilterTab}
+          onFilterChange={(tab) => {
+            setFilterTab(tab);
+            setCurrentPage(1);
+          }}
           totalCount={totalCount}
           pendingCount={pendingCount}
           completedCount={completedCount}
@@ -342,7 +344,7 @@ export const TodoApp = () => {
             <div className="todo-skeleton-card"></div>
             <div className="todo-skeleton-card"></div>
           </div>
-        ) : filteredList.length === 0 ? (
+        ) : todoList.length === 0 ? (
           <div className="todo-state-box">
             <div className="todo-state-icon">
               <ClipboardCheck size={28} />
@@ -384,30 +386,40 @@ export const TodoApp = () => {
             </div>
           </div>
         ) : (
-          <div className="todo-cards-list">
-            {filteredList.map((item) => (
-              <TodoItem
-                key={item.id}
-                item={item}
-                isEditing={editingId === item.id}
-                editTitle={editTitle}
-                editDescription={editDescription}
-                editDueDate={editDueDate}
-                editErrors={editErrors}
-                onEditTitleChange={setEditTitle}
-                onEditDescriptionChange={setEditDescription}
-                onEditDueDateChange={setEditDueDate}
-                isUpdating={updatingId === item.id}
-                isDeleting={deletingId === item.id}
-                isDisabledActions={updatingId !== null || deletingId !== null}
-                onStartEdit={() => handleStartEdit(item)}
-                onCancelEdit={handleCancelEdit}
-                onSaveEdit={() => handleSaveEdit(item.id)}
-                onToggleStatus={(completed) => handleToggleStatus(item, completed)}
-                onDelete={() => handleDelete(item.id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="todo-cards-list">
+              {todoList.map((item) => (
+                <TodoItem
+                  key={item.id}
+                  item={item}
+                  isEditing={editingId === item.id}
+                  editTitle={editTitle}
+                  editDescription={editDescription}
+                  editDueDate={editDueDate}
+                  editErrors={editErrors}
+                  onEditTitleChange={setEditTitle}
+                  onEditDescriptionChange={setEditDescription}
+                  onEditDueDateChange={setEditDueDate}
+                  isUpdating={updatingId === item.id}
+                  isDeleting={deletingId === item.id}
+                  isDisabledActions={updatingId !== null || deletingId !== null}
+                  onStartEdit={() => handleStartEdit(item)}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={() => handleSaveEdit(item.id)}
+                  onToggleStatus={(completed) => handleToggleStatus(item, completed)}
+                  onDelete={() => handleDelete(item.id)}
+                />
+              ))}
+            </div>
+
+            {/* Giao diện phân trang */}
+            <TodoPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              isLoading={isLoading}
+            />
+          </>
         )}
       </div>
     </main>

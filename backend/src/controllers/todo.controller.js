@@ -21,13 +21,11 @@ module.exports.getList = async (req, res, next) => {
     // console.log(req.keywordSearch);
 
     const userId = req.auth.userId;
-    const keyword = req.keywordSearch;
-    
-    const todos = await todoService.getTodos(userId, keyword);
+    const validatedQuery = req.validatedQuery;
 
-    return res.status(200).json({
-      data: todos,
-    })
+    const result  = await todoService.getTodos(userId, validatedQuery);
+
+    return res.status(200).json(result );
   } catch (error) {
     next(error);
   }

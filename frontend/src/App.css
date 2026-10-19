@@ -1329,6 +1329,125 @@
   }
 }
 
+/* ==========================================================================
+   Todo Pagination Component
+   ========================================================================== */
+.todo-pagination {
+  margin-top: 24px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.todo-pagination-info {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.todo-pagination-info strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.todo-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-pagination-controls,
+.todo-page-numbers {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.todo-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 34px;
+  color: #64748b;
+}
+
+.todo-page-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.todo-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.todo-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.todo-page-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.todo-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.todo-page-number {
+  min-width: 34px;
+  padding: 0 6px;
+}
+
+.todo-page-number.is-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.todo-page-number.is-active:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .todo-pagination {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

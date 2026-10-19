@@ -16,10 +16,18 @@ export const formatDueDate = (dateStr) => {
 };
 
 export const isOverdue = (todo) => {
-  if (!todo.dueDate || todo.completed) {
+  if (!todo.dueDate) {
     return false;
   }
 
-  const today = vnDateFormatter.format(new Date());
+  if (todo.completed) {
+    return Boolean(todo.completedDate && todo.completedDate > todo.dueDate);
+  }
+
+  const parts = vnDateFormatter.formatToParts(new Date());
+  const year = parts.find((part) => part.type === 'year').value;
+  const month = parts.find((part) => part.type === 'month').value;
+  const day = parts.find((part) => part.type === 'day').value;
+  const today = `${year}-${month}-${day}`;
   return todo.dueDate < today;
 };

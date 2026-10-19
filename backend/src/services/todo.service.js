@@ -23,18 +23,36 @@ module.exports.createPost = async (userId, { title, description, dueDate }) => {
   return todo;
 };
 
-module.exports.getTodos = async (userId, keyword) => {
-  return todoRepository.findTodosByUserId(userId, keyword);
+module.exports.getTodos = async (userId, { page, limit, keyword, filterTab }) => {
+  const offset = (page - 1) * limit;
+
+  const result = await todoRepository.findTodosByUserId(userId, {
+    keyword,
+    filterTab,
+    limit,
+    offset,
+  });
+
+  return {
+    data: result.todos,
+    pagination: {
+      page,
+      limit,
+      totalItems: result.totalItems,
+      totalPages: Math.ceil(result.totalItems / limit),
+    },
+    stats: result.stats,
+  };
 }
 
 module.exports.updateStatus = async (userId, todoId, completed) => {
- const todo = await todoRepository.updateStatus(userId, todoId, completed);
+  const todo = await todoRepository.updateStatus(userId, todoId, completed);
 
- if(!todo) {
-  throw new Error('Công việc không tìm thấy');
- }
+  if(!todo) {
+    throw new Error('Công việc không tìm thấy');
+  }
 
- return todo;
+  return todo;
 }
 
 module.exports.updateTodo = async (userId, todoId, updateData) => {

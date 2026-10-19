@@ -14,6 +14,7 @@ module.exports.createTodo = async (userId, title, description, completed, dueDat
       description,
       completed,
       DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
+      date_format(completed_date, '%Y-%m-%d') as completedDate,
       created_at AS createdAt,
       updated_at AS updatedAt
     from todos 
@@ -29,34 +30,84 @@ module.exports.createTodo = async (userId, title, description, completed, dueDat
   }
 }
 
-module.exports.findTodosByUserId = async (userId, keyword) => {
+module.exports.findTodosByUserId = async (
+  userId,
+  { keyword, filterTab, limit, offset }
+) => {
+
   const keywordSearch = `%${keyword}%`;
-  const [rows] = await pool.execute(
-    `select id,
+
+  const conditions = {
+    all: '',
+    pending: 'and completed = false',
+    completed: 'and completed = true',
+    overdue: `
+      and (
+        (completed = false and due_date < date(utc_timestamp() + interval 7 hour))
+        or (completed = true and completed_date > due_date)
+      )
+    `,
+  };
+  const filterCondition = conditions[filterTab];
+
+  // Đếm mỗi tab trên toàn bộ kết quả tìm kiếm, không giới hạn theo trang.
+  const stats = {};
+  for (const tab of ['all', 'pending', 'completed', 'overdue']) {
+    const [countRows] = await pool.execute(
+      `select count(*) as total
+       from todos
+       where user_id = ?
+         and title like ?
+         ${conditions[tab]}`,
+      [userId, keywordSearch]
+    );
+    stats[tab] = Number(countRows[0].total);
+  }
+  const totalItems = stats[filterTab];
+
+  // 2. Lấy công việc của trang hiện tại.
+  const [rows] = await pool.query(
+    `select
+      id,
       title,
       description,
       completed,
-      DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
-      created_at AS createdAt,
-      updated_at AS updatedAt
-    from todos 
-    where user_id = ? and title like ?
-    order by created_at desc, id desc`,
-    [userId, keywordSearch]
+      date_format(due_date, '%Y-%m-%d') as dueDate,
+      date_format(completed_date, '%Y-%m-%d') as completedDate,
+      created_at as createdAt,
+      updated_at as updatedAt
+     from todos
+     where user_id = ?
+      and title like ?
+      ${filterCondition}
+    order by created_at desc, id desc
+    limit ? offset ?`,
+    [userId, keywordSearch, limit, offset]
   );
-  
-  return rows.map((todo) => ({
+
+  const todos = rows.map((todo) => ({
     ...todo,
     completed: Boolean(todo.completed),
   }));
-}
+
+  return {
+    todos,
+    totalItems,
+    stats,
+  };
+};
 
 module.exports.updateStatus = async (userId, todoId, completed) => {
   await pool.execute(
     `UPDATE todos
-    SET completed = ?
+    SET completed_date = case
+          when ? = false then null
+          when completed = false then date(utc_timestamp() + interval 7 hour)
+          else completed_date
+        end,
+        completed = ?
     WHERE id = ? AND user_id = ?`,
-    [completed, todoId, userId]
+    [completed, completed, todoId, userId]
   );
 
   const [rows] = await pool.execute(
@@ -66,6 +117,7 @@ module.exports.updateStatus = async (userId, todoId, completed) => {
       description,
       completed,
       DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
+      date_format(completed_date, '%Y-%m-%d') as completedDate,
       created_at as createdAt,
       updated_at as updatedAt
     from todos
@@ -103,6 +155,13 @@ module.exports.updateTodo = async (userId, todoId, updates) => {
     values.push(updates.dueDate);
   }
   if (updates.completed !== undefined) {
+    // Xét trạng thái cũ trước khi cập nhật completed.
+    setClauses.push(`completed_date = case
+      when ? = false then null
+      when completed = false then date(utc_timestamp() + interval 7 hour)
+      else completed_date
+    end`);
+    values.push(updates.completed);
     setClauses.push('completed = ?');
     values.push(updates.completed);
   }
@@ -124,6 +183,7 @@ module.exports.updateTodo = async (userId, todoId, updates) => {
       description,
       completed,
       DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
+      date_format(completed_date, '%Y-%m-%d') as completedDate,
       created_at as createdAt,
       updated_at as updatedAt
     from todos

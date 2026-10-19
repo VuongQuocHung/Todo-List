@@ -22,6 +22,7 @@ create table if not exists todos (
   description varchar(2000) null,
   completed boolean not null default false,
   due_date date null,
+  completed_date date null,
   created_at datetime(3) not null default current_timestamp(3),
   updated_at datetime(3) not null default current_timestamp(3) 
   on update current_timestamp(3),
@@ -54,11 +55,11 @@ create table if not exists tags (
 );
 
 create table if not exists todo_tags (
+  id bigint unsigned auto_increment primary key,
   todo_id bigint unsigned not null,
   tag_id bigint unsigned not null,
   created_at datetime(3) not null default current_timestamp(3),
 
-  primary key (todo_id, tag_id),
   index idx_todo_tags_tag_id (tag_id),
 
   constraint fk_todo_tags_todo
