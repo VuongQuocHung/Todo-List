@@ -1,109 +1,44 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { toast } from 'sonner';
 
+import { useTodoQuery } from '../hooks/useTodoQuery';
 import { useTodos } from '../hooks/useTodos';
-
-import { TodoHeader } from '../components/todo/TodoHeader';
-
-import { TodoCreateForm } from '../components/todo/TodoCreateForm';
-
-import { TodoSearchBar } from '../components/todo/TodoSearchBar';
-import { TodoFilterTabs } from '../components/todo/TodoFilterTabs';
-
-import { TodoList } from '../components/todo/TodoList';
-
-import { TodoPagination } from '../components/todo/TodoPagination';
-
-import { TodoErrorBanner } from '../components/todo/TodoErrorBanner';
-
-
-import { TodoEmptyState } from '../components/todo/TodoEmptyState';
-
 import { useTodoMutations } from '../hooks/useTodoMutations';
-
 import { getErrorMessage } from '../lib/errorHandler';
 
-const FILTER_TABS = ['all', 'pending', 'completed', 'overdue'];
-
-// Tạo query mới từ query cũ + các thay đổi.
-// Giá trị mặc định (trang 1, tab all, từ khóa rỗng) thì xóa khỏi URL cho gọn.
-const applyQueryChanges = (prev, changes) => {
-  const next = new URLSearchParams(prev);
-
-  Object.entries(changes).forEach(([key, value]) => {
-    const isDefault =
-      value === '' ||
-      (key === 'page' && value === 1) ||
-      (key === 'tab' && value === 'all');
-
-    if (isDefault) {
-      next.delete(key);
-    } else {
-      next.set(key, String(value));
-    }
-  });
-
-  return next;
-};
-
+import { TodoHeader } from '../components/todo/TodoHeader';
+import { TodoCreateForm } from '../components/todo/TodoCreateForm';
+import { TodoSearchBar } from '../components/todo/TodoSearchBar';
+import { TodoFilterTabs } from '../components/todo/TodoFilterTabs';
+import { TodoErrorBanner } from '../components/todo/TodoErrorBanner';
+import { TodoList } from '../components/todo/TodoList';
+import { TodoEmptyState } from '../components/todo/TodoEmptyState';
+import { TodoPagination } from '../components/todo/TodoPagination';
 
 export const TodoApp = () => {
-  // State kiểm soát trạng thái Ẩn / Hiện (Đóng / Mở) của form tạo công việc mới
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // State giao diện
+  const [isCreateOpen, setIsCreateOpen] = useState(false); // form tạo công việc đang mở?
+  const [editingId, setEditingId] = useState(null); // id công việc đang sửa
 
-  // Trang, tab, từ khóa lưu trên URL → F5 không bị mất, dùng được nút Back
-  const [searchParams, setSearchParams] = useSearchParams();
+  // Trang / tab / từ khóa (lưu trên URL)
+  const { searchKeyword, filterTab, currentPage, updateQuery } = useTodoQuery();
 
-  const searchKeyword = searchParams.get('q') ?? '';
-
-  const tabParam = searchParams.get('tab');
-  const filterTab = FILTER_TABS.includes(tabParam) ? tabParam : 'all';
-
-  const pageParam = Number(searchParams.get('page'));
-  const currentPage = Number.isInteger(pageParam) && pageParam >= 1 ? pageParam : 1;
-
-  const updateQuery = (changes, options) => {
-    setSearchParams((prev) => applyQueryChanges(prev, changes), options);
-  };
-
-    // Danh sách công việc: SWR tự lo tải, cache, lỗi, tải lại
-  const { 
-    todoList, 
-    totalPages, 
-    stats, 
-    isLoading, 
-    error, 
-  } = useTodos({
+  // Danh sách công việc: SWR tự lo tải, cache, lỗi, tải lại
+  const { todoList, totalPages, stats, isLoading, error } = useTodos({
     keyword: searchKeyword,
     page: currentPage,
     filterTab,
-    // Trang hiện tại không còn tồn tại thì lùi về trang cuối
-    onPageOverflow: (lastPage) => updateQuery({ 
-      page: lastPage 
-    }, { 
-      replace: true 
-    }),
+    // Trang hiện tại không còn tồn tại → lùi về trang cuối (replace: Back không quay lại trang đó)
+    onPageOverflow: (lastPage) => updateQuery({ page: lastPage }, { replace: true }),
   });
-
-  const loadError = error ? getErrorMessage(error, 'Không tải được danh sách công việc') : '';
-
-
-  // State form chỉnh sửa công việc
-  const [editingId, setEditingId] = useState(null);
 
   // Tạo / sửa / xóa: gọi API, khóa nút trong lúc chờ, làm mới danh sách
   const { pending, createTodo, updateTodo, deleteTodo } = useTodoMutations();
 
-  const handleToggleCreate = () => { // Bật tắt form tạo công việc
-    setIsCreateOpen((prev) => !prev); // đang đóng thì bấm sẽ mở, đang mở thì bấm sẽ đóng lại.
-  };
+  const loadError = error ? getErrorMessage(error, 'Không tải được danh sách công việc') : '';
+  const percentDone = stats.all > 0 ? Math.round((stats.completed / stats.all) * 100) : 0;
 
-  const handleStartEdit = (id) => { // Chỉnh sửa một công việc đã có
-    setEditingId(id);
-  };
-
-  const handleCancelEdit = () => { // Hủy chỉnh sửa công việc
+  const handleCancelEdit = () => {
     setEditingId(null);
   };
 
@@ -138,14 +73,9 @@ export const TodoApp = () => {
     }
   };
 
-
-  const handleCreateTodo = async (todoData) => {
+  const handleCreate = async (todoData) => {
     const newTodo = await createTodo(todoData);
-
-    updateQuery({ 
-      page: 1 
-    });
-
+    updateQuery({ page: 1 }); // về trang 1 để thấy công việc vừa tạo
     return newTodo;
   };
 
@@ -158,40 +88,30 @@ export const TodoApp = () => {
     updateQuery({ q: '', page: 1 });
   };
 
-
-  // Thống kê & Lọc danh sách
-  const totalCount = stats.all;
-  const completedCount = stats.completed;
-  const percentDone = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
   const handlePageChange = (page) => {
-    handleCancelEdit(); // đóng form sửa trước khi chuyển trang.
+    handleCancelEdit(); // đóng form sửa trước khi chuyển trang
     updateQuery({ page });
   };
 
   return (
     <main className="todo-page">
       <div className="todo-container">
-        {/* Header: Thống kê & Nút bấm chuyển đổi trạng thái */}
         <TodoHeader
-          totalCount={totalCount}
-          completedCount={completedCount}
+          totalCount={stats.all}
+          completedCount={stats.completed}
           percentDone={percentDone}
           isCreateOpen={isCreateOpen}
-          onToggleCreate={handleToggleCreate}
+          onToggleCreate={() => setIsCreateOpen((prev) => !prev)}
         />
 
-        {/* Form tạo công việc mới */}
         {isCreateOpen && (
           <TodoCreateForm
-            onCreate={handleCreateTodo}
+            onCreate={handleCreate}
             onClose={() => setIsCreateOpen(false)}
             disabled={isLoading}
           />
         )}
 
-        {/* Toolbar: Search & Filter Tabs */}
-        {/* Toolbar: Tìm kiếm & Tab lọc */}
         <section className="todo-toolbar">
           <TodoSearchBar
             searchKeyword={searchKeyword}
@@ -205,8 +125,6 @@ export const TodoApp = () => {
           />
         </section>
 
-
-        {/* Main Todo List Area */}
         <TodoErrorBanner message={loadError} />
 
         <TodoList
@@ -214,7 +132,7 @@ export const TodoApp = () => {
           isLoading={isLoading}
           editingId={editingId}
           pending={pending}
-          onStartEdit={handleStartEdit}
+          onStartEdit={setEditingId}
           onCancelEdit={handleCancelEdit}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
@@ -229,7 +147,6 @@ export const TodoApp = () => {
           }
         />
 
-        {/* Giao diện phân trang */}
         <TodoPagination
           currentPage={currentPage}
           totalPages={totalPages}
