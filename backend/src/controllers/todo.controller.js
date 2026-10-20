@@ -57,3 +57,18 @@ module.exports.deleteTodo = async (req, res, next) => {
     next(error);
   }
 };
+
+module.exports.getDetail = async (req, res, next) => {
+  try {
+    const userId = req.auth.userId;
+    const todoId = req.params.id;
+
+    const todo = await todoService.getTodoById(userId, todoId);
+
+    return res.status(200).json({
+      data: todo,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

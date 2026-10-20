@@ -159,3 +159,16 @@ module.exports.getList = (req, res, next) => {
 
   next();
 };
+
+module.exports.getDetail = (req, res, next) => {
+  if (!/^[1-9]\d{0,19}$/.test(req.params.id)) {
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'ID công việc không hợp lệ',
+      },
+    });
+  }
+
+  next();
+};

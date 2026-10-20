@@ -23,4 +23,12 @@ router.get(
   todoController.getList
 );
 
+router.get(
+  '/:id',
+  authMiddleware.requireAuth,
+  todoValidation.getDetail,
+  todoController.getDetail
+);
+
+
 module.exports = router;

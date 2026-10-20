@@ -74,3 +74,16 @@ module.exports.deleteTodo = async (userId, todoId) => {
     throw error;
   }
 }
+
+module.exports.getTodoById = async (userId, todoId) => {
+  const todo = await todoRepository.findTodoById(userId, todoId);
+
+  if (!todo) {
+    const error = new Error('Không tìm thấy công việc');
+    error.statusCode = 404;
+    error.code = 'TODO_NOT_FOUND';
+    throw error;
+  }
+
+  return todo;
+};

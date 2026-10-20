@@ -13,7 +13,7 @@ module.exports.createTodo = async (userId, title, description, completed, dueDat
       title,
       description,
       completed,
-      DATE_FORMAT(due_date, '%Y-%m-%d') AS dueDate,
+      date_format(due_date, '%Y-%m-%d') AS dueDate,
       date_format(completed_date, '%Y-%m-%d') as completedDate,
       created_at AS createdAt,
       updated_at AS updatedAt
@@ -58,10 +58,10 @@ module.exports.findTodosByUserId = async (userId, {
   for (const tab of ['all', 'pending', 'completed', 'overdue']) {
     const [countRows] = await pool.execute(
       `select count(*) as total
-       from todos
-       where user_id = ?
-         and title like ?
-         ${conditions[tab]}`,
+      from todos
+      where user_id = ?
+        and title like ?
+        ${conditions[tab]}`,
       [userId, keywordSearch]
     );
     stats[tab] = Number(countRows[0].total);
@@ -79,8 +79,8 @@ module.exports.findTodosByUserId = async (userId, {
       date_format(completed_date, '%Y-%m-%d') as completedDate,
       created_at as createdAt,
       updated_at as updatedAt
-     from todos
-     where user_id = ?
+    from todos
+    where user_id = ?
       and title like ?
       ${filterCondition}
     order by created_at desc, id desc
@@ -132,8 +132,8 @@ module.exports.updateTodo = async (userId, todoId, updates) => {
     values.push(todoId, userId);
     await pool.execute(
       `UPDATE todos
-       SET ${setClauses.join(', ')}
-       WHERE id = ? AND user_id = ?`,
+      SET ${setClauses.join(', ')}
+      WHERE id = ? AND user_id = ?`,
       values
     );
   }
@@ -174,3 +174,32 @@ module.exports.deleteTodo = async (userId, todoId) => {
 
   return result.affectedRows;
 }
+
+module.exports.findTodoById = async (userId, todoId) => {
+  // Lọc theo cả id và user_id → không bao giờ trả công việc của người khác
+  const [rows] = await pool.execute(
+    `select
+      id,
+      title,
+      description,
+      completed,
+      date_format(due_date, '%Y-%m-%d') as dueDate,
+      date_format(completed_date, '%Y-%m-%d') as completedDate,
+      created_at as createdAt,
+      updated_at as updatedAt
+    from todos
+    where id = ? and user_id = ?`,
+    [todoId, userId]
+  );
+
+  const todo = rows[0];
+
+  if (!todo) {
+    return null;
+  }
+
+  return {
+    ...todo,
+    completed: Boolean(todo.completed),
+  };
+};
