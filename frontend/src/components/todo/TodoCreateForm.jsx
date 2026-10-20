@@ -5,6 +5,7 @@ import {
   X,
   AlertCircle,
 } from 'lucide-react';
+import { handleError } from '../../lib/errorHandler';
 
 export const TodoCreateForm = ({
   onCreate,
@@ -61,7 +62,7 @@ export const TodoCreateForm = ({
       toast.success('Tạo công việc thành công');
       onClose();
     } catch (error) {
-      toast.error(error.message);
+      handleError(error);
     } finally {
       setIsSubmitting(false);
     }

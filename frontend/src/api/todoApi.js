@@ -41,7 +41,7 @@ export const updateTodo = async (id, updateData, options) => {
 }
 
 export const deleteTodo = async (id, options) => {
-  return result = await request(`/api/todos/${id}`, {
+  return request(`/api/todos/${id}`, {
     ...options,
     method: 'DELETE',
   });

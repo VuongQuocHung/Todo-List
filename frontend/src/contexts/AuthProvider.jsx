@@ -1,5 +1,6 @@
 import { AuthContext } from "./AuthContext";
 import { useEffect, useState } from "react";
+import { request } from '../api/httpClient';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -48,17 +49,11 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = async () => {
-    const response = await fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include'
-    });
-
-    if(!response.ok){
-      throw new Error('Không thể đăng xuất');
-    }
+    await request('/api/auth/logout', { method: 'POST' }); // lỗi → ApiError, để nơi gọi xử lý
 
     setUser(null);
-  }
+  };
+
 
   return (
     <AuthContext.Provider 

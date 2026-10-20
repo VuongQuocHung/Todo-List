@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext.js';
 import { useState, useContext } from 'react';
 import { toast } from 'sonner';
+import { handleError } from '../../lib/errorHandler';
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export const Header = () => {
       toast.success('Đăng xuất thành công');
       navigate('/');
     } catch (error){
-      toast.error(error.message);
+      handleError(error);
     } finally {
       setIsLogginOut(false);
     }

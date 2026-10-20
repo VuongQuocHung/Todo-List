@@ -22,6 +22,8 @@ import { TodoSkeletonList } from '../components/todo/TodoSkeletonList';
 import { TodoEmptyState } from '../components/todo/TodoEmptyState';
 
 import { getTodos, createTodo, updateTodo, deleteTodo } from '../api/todoApi';
+import { handleError, getErrorMessage } from '../lib/errorHandler';
+
 
 const FILTER_TABS = ['all', 'pending', 'completed', 'overdue'];
 
@@ -122,7 +124,7 @@ export const TodoApp = () => {
       return true;
       
     } catch (error) {
-      toast.error(error.message);
+      handleError(error);
       return false;
     } finally {
       setPending(null);
@@ -169,7 +171,7 @@ export const TodoApp = () => {
 
       toast.success('Xóa công việc thành công');
     } catch (error) {
-      toast.error(error.message);
+      handleError(error);
     } finally {
       setPending(null);
     }
@@ -239,6 +241,10 @@ export const TodoApp = () => {
         if (controller.signal.aborted) {
           return; // request bị hủy vì đã có request mới hơn → không phải lỗi
         }
+        handleError(error, { 
+          silent: true 
+        }); // xử lý 401 + log; không toast vì đã có banner
+        
         setTodoList([]);
         setLoadError(error.message);
       } finally {
