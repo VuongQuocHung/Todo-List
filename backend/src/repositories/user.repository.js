@@ -21,14 +21,14 @@ module.exports.findUserByEmail = async (email) => {
 module.exports.findUserById = async (id) => {
   const [rows] = await pool.execute(
     `SELECT
-       id,
-       username,
-       fullname,
-       email,
-       created_at AS createdAt
-     FROM users
-     WHERE id = ?
-     LIMIT 1`,
+      id,
+      username,
+      fullname,
+      email,
+      created_at AS createdAt
+    FROM users
+    WHERE id = ?
+    LIMIT 1`,
     [id]
   );
 
@@ -38,14 +38,14 @@ module.exports.findUserById = async (id) => {
 module.exports.findUserByUsername = async (username) => {
   const [rows] = await pool.execute(
     `SELECT
-       id,
-       username,
-       fullname,
-       email,
-       created_at AS createdAt
-     FROM users
-     WHERE username = ?
-     LIMIT 1`,
+      id,
+      username,
+      fullname,
+      email,
+      created_at AS createdAt
+    FROM users
+    WHERE username = ?
+    LIMIT 1`,
     [username]
   );
 
@@ -57,15 +57,15 @@ module.exports.findUserForLogin = async (
 ) => {
   const [rows] = await pool.execute(
     `SELECT
-       id,
-       username,
-       fullname,
-       email,
-       password_hash AS passwordHash,
-       created_at AS createdAt
-     FROM users
-     WHERE email = ?
-     LIMIT 1`,
+      id,
+      username,
+      fullname,
+      email,
+      password_hash AS passwordHash,
+      created_at AS createdAt
+    FROM users
+    WHERE email = ?
+    LIMIT 1`,
     [email]
   );
 

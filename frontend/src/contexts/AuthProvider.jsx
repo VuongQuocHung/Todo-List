@@ -11,31 +11,28 @@ export const AuthProvider = ({ children }) => {
 
 
   useEffect(() => { // Kiểm tra đăng nhập
-    let ignore = false; // bỏ qua kết quả của một lời gọi API cũ khi Component đã bị gỡ bỏ (unmount) hoặc khi useEffect đã chạy sang lượt mới.
+    // Effect bị dọn dẹp (unmount / StrictMode chạy lại) → hủy hẳn request cũ
+    const controller = new AbortController();
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include'
+        const result = await request('/api/auth/me', { 
+          signal: controller.signal 
         });
 
-        if(!response.ok){
-          if(!ignore){
-            setUser(null);
-          }
+        if (controller.signal.aborted) {
           return;
         }
 
-        const result = await response.json();
-        // console.log("Chay vao AuthProvider:", data);
-        if (!ignore) {
-          setUser(result.data);
-        }
+        setUser(result.data);
       } catch {
-        if (!ignore) {
-          setUser(null);
+        if (controller.signal.aborted) {
+          return; // request bị hủy chủ động → không phải lỗi
         }
+
+        // 401 (chưa đăng nhập), mất mạng, server lỗi... → coi như chưa đăng nhập
+        setUser(null);
       } finally {
-        if (!ignore) {
+        if (!controller.signal.aborted) {
           setIsAuthLoading(false);
         }
       }
@@ -44,7 +41,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
 
     return () => {
-      ignore = true; // đánh dấu rằng kết quả request này không còn được sử dụng
+      controller.abort();
     };
   }, []);
 

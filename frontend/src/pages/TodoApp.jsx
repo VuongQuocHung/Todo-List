@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { useTodos } from '../hooks/useTodos';
 
 import { TodoHeader } from '../components/todo/TodoHeader';
 
@@ -53,11 +54,6 @@ export const TodoApp = () => {
   // State kiểm soát trạng thái Ẩn / Hiện (Đóng / Mở) của form tạo công việc mới
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // State danh sách công việc
-  const [todoList, setTodoList] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-
   // Trang, tab, từ khóa lưu trên URL → F5 không bị mất, dùng được nút Back
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -73,15 +69,28 @@ export const TodoApp = () => {
     setSearchParams((prev) => applyQueryChanges(prev, changes), options);
   };
 
-  const [totalPages, setTotalPages] = useState(0);
-  const [reloadKey, setReloadKey] = useState(0); // Tín hiệu tải lại sau khi tạo/sửa/xóa
+    // Danh sách công việc: SWR tự lo tải, cache, lỗi, tải lại
+  const { 
+    todoList, 
+    totalPages, 
+    stats, 
+    isLoading, 
+    error, 
+    reload 
+  } = useTodos({
+    keyword: searchKeyword,
+    page: currentPage,
+    filterTab,
+    // Trang hiện tại không còn tồn tại thì lùi về trang cuối
+    onPageOverflow: (lastPage) => updateQuery({ 
+      page: lastPage 
+    }, { 
+      replace: true 
+    }),
+  });
 
-  const [stats, setStats] = useState({
-    all: 0,
-    pending: 0,
-    completed: 0,
-    overdue: 0,
-  }); // Số công việc của từng trạng thái trên mọi trang, theo từ khóa tìm kiếm
+  const loadError = error ? getErrorMessage(error, 'Không tải được danh sách công việc') : '';
+
 
   // State form chỉnh sửa công việc
   const [editingId, setEditingId] = useState(null);
@@ -91,7 +100,6 @@ export const TodoApp = () => {
   // action: 'update' | 'delete' 
   // } hoặc null
   const [pending, setPending] = useState(null);
-
 
 
   const handleToggleCreate = () => { // Bật tắt form tạo công việc
@@ -119,7 +127,8 @@ export const TodoApp = () => {
     try {
       await updateTodo(id, updateData);
 
-      setReloadKey((value) => value + 1);
+      reload();
+
 
       return true;
       
@@ -164,7 +173,7 @@ export const TodoApp = () => {
     try {
       await deleteTodo(id);
 
-      setReloadKey((value) => value + 1);
+      reload();
 
       // Nếu đang sửa đúng công việc vừa xóa thì đóng form
       setEditingId((prev) => (prev === id ? null : prev));
@@ -181,7 +190,7 @@ export const TodoApp = () => {
     const newTodo = await createTodo(todoData);
 
     updateQuery({ page: 1 });
-    setReloadKey((value) => value + 1);
+    reload();
 
     return newTodo;
   };
@@ -205,63 +214,6 @@ export const TodoApp = () => {
     handleCancelEdit(); // đóng form sửa trước khi chuyển trang.
     updateQuery({ page });
   };
-
-  useEffect(() => {
-    // Mỗi lần effect chạy tạo 1 controller; effect chạy lại hoặc unmount → hủy request cũ
-    const controller = new AbortController();
-
-    const loadTodos = async () => {
-      setIsLoading(true);
-      setLoadError('');
-
-      try {
-        const result = await getTodos({  
-          keyword: searchKeyword, 
-          page: currentPage, 
-          limit: '5', 
-          filterTab 
-        },  { 
-          signal: controller.signal 
-        });
-
-        if (controller.signal.aborted) {
-          return;
-        }
-        setTodoList(result.data);
-        setTotalPages(result.pagination.totalPages);
-        setStats(result.stats);
-
-        // Xóa/sửa phần tử cuối của trang có thể làm giảm tổng số trang.
-        const lastPage = Math.max(1, result.pagination.totalPages);
-        if (currentPage > lastPage) {
-          // replace: thay URL hiện tại, không thêm vào lịch sử → Back không quay về trang không tồn tại
-          setSearchParams((prev) => applyQueryChanges(prev, { page: lastPage }), { replace: true });
-        }
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return; // request bị hủy vì đã có request mới hơn → không phải lỗi
-        }
-        handleError(error, { 
-          silent: true 
-        }); // xử lý 401 + log; không toast vì đã có banner
-
-        setTodoList([]);
-        setLoadError(getErrorMessage(error, 'Không tải được danh sách công việc'));
-
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadTodos();
-
-    return () => {
-      controller.abort();
-    };
-  }, [searchKeyword, currentPage, filterTab, reloadKey, setSearchParams]);
-
 
   return (
     <main className="todo-page">

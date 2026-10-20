@@ -1,5 +1,6 @@
 const userRepository = require('../repositories/user.repository');
 const todoRepository = require('../repositories/todo.repository');
+const todoCache = require('../caches/todo.cache');
 
 module.exports.createPost = async (userId, { title, description, dueDate }) => {
   const user = await userRepository.findUserById(userId);
@@ -60,6 +61,10 @@ module.exports.updateTodo = async (userId, todoId, updateData) => {
     throw error;
   }
 
+  // Dữ liệu đã đổi → xóa bản cũ trong cache
+  await todoCache.deleteTodo(userId, todoId);
+
+
   return todo;
 };
 
@@ -73,17 +78,32 @@ module.exports.deleteTodo = async (userId, todoId) => {
     
     throw error;
   }
+
+  // Công việc đã bị xóa → xóa luôn cache để lần đọc sau trả 404
+  await todoCache.deleteTodo(userId, todoId);
 }
 
 module.exports.getTodoById = async (userId, todoId) => {
+  // 1. Thử đọc cache trước
+  const cachedTodo = await todoCache.getTodo(userId, todoId);
+
+  if (cachedTodo) {
+    return cachedTodo;
+  }
+
+  // 2. Cache miss → đọc database (lọc theo cả id và user_id)
   const todo = await todoRepository.findTodoById(userId, todoId);
 
   if (!todo) {
     const error = new Error('Không tìm thấy công việc');
     error.statusCode = 404;
     error.code = 'TODO_NOT_FOUND';
-    throw error;
+    throw error; // không ghi cache cho trường hợp không tìm thấy
   }
+
+  // 3. Lưu vào cache cho lần đọc sau
+  await todoCache.setTodo(userId, todo);
 
   return todo;
 };
+
