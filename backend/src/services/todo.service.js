@@ -21,15 +21,28 @@ module.exports.createPost = async (userId, { title, description, dueDate }) => {
     dueDate || null
   );
 
+  await todoCache.bumpListVersion(userId); // có công việc mới → danh sách cũ không còn đúng
+
+  return todo;
+
+
   return todo;
 };
 
-module.exports.getTodos = async (userId, {      
-  page, 
-  limit, 
-  keyword, 
-  filterTab
-}) => {
+module.exports.getTodos = async (userId, { page, limit, keyword, filterTab }) => {
+  // 1. Thử đọc cache trước
+  const { data: cachedList, cacheKey } = await todoCache.getList(userId, {
+    page,
+    limit,
+    keyword,
+    filterTab,
+  });
+
+  if (cachedList) {
+    return cachedList;
+  }
+
+  // 2. Cache miss → đọc database
   const offset = (page - 1) * limit;
 
   const result = await todoRepository.findTodosByUserId(userId, {
@@ -39,7 +52,7 @@ module.exports.getTodos = async (userId, {
     offset,
   });
 
-  return {
+  const response = {
     data: result.todos,
     pagination: {
       page,
@@ -49,7 +62,13 @@ module.exports.getTodos = async (userId, {
     },
     stats: result.stats,
   };
-}
+
+  // 3. Lưu cache bằng đúng key đã tính ở bước 1
+  await todoCache.setList(cacheKey, response);
+
+  return response;
+};
+
 
 module.exports.updateTodo = async (userId, todoId, updateData) => {
   const todo = await todoRepository.updateTodo(userId, todoId, updateData);
@@ -63,7 +82,9 @@ module.exports.updateTodo = async (userId, todoId, updateData) => {
 
   // Dữ liệu đã đổi → xóa bản cũ trong cache
   await todoCache.deleteTodo(userId, todoId);
+  await todoCache.bumpListVersion(userId);
 
+  return todo;
 
   return todo;
 };
@@ -81,6 +102,8 @@ module.exports.deleteTodo = async (userId, todoId) => {
 
   // Công việc đã bị xóa → xóa luôn cache để lần đọc sau trả 404
   await todoCache.deleteTodo(userId, todoId);
+  await todoCache.bumpListVersion(userId);
+
 }
 
 module.exports.getTodoById = async (userId, todoId) => {
