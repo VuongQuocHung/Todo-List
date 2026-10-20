@@ -3,12 +3,22 @@ import { useEffect, useState } from "react";
 import { request } from '../api/httpClient';
 import { useNavigate } from 'react-router-dom';
 import { UNAUTHORIZED_EVENT } from '../lib/errorHandler';
+import { useSWRConfig } from 'swr';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const navigate = useNavigate();
 
+  const { mutate } = useSWRConfig();
+
+
+  // Xóa toàn bộ dữ liệu SWR đã cache (không tải lại) → người đăng nhập sau không thấy dữ liệu người trước
+  const clearCache = () => {
+    mutate(() => true, undefined, { 
+      revalidate: false 
+    });
+  };
 
   useEffect(() => { // Kiểm tra đăng nhập
     // Effect bị dọn dẹp (unmount / StrictMode chạy lại) → hủy hẳn request cũ
@@ -49,6 +59,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const handleUnauthorized = () => {
       setUser(null);
+      clearCache();
       navigate('/login', { replace: true });
     };
 
@@ -68,6 +79,7 @@ export const AuthProvider = ({ children }) => {
     await request('/api/auth/logout', { method: 'POST' }); // lỗi → ApiError, để nơi gọi xử lý
 
     setUser(null);
+    clearCache();
   };
 
 
