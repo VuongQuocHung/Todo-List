@@ -6,12 +6,13 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
+import { memo } from 'react';
+
 import { formatDueDate, isOverdue } from '../../utils/todoDate';
 
 import { TodoEditForm } from './TodoEditForm';
 
-
-export const TodoItem = ({
+export const TodoItem = memo(function TodoItem({
   item,
   isEditing, // item này đang mở form sửa
   pendingAction, // 'update' | 'delete' | null — thao tác đang chạy trên item này
@@ -20,7 +21,9 @@ export const TodoItem = ({
   onCancelEdit, // () => ...
   onUpdate, // (id, data) => ...
   onDelete, // (id) => ...
-}) => {
+}) {
+  //console.log('render TodoItem', item.id);
+
   const isUpdating = pendingAction === 'update';
   const isDeleting = pendingAction === 'delete';
 
@@ -114,4 +117,4 @@ export const TodoItem = ({
     </article>
 
 )
-}
+});

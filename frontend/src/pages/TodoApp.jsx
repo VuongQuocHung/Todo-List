@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useTodoQuery } from '../hooks/useTodoQuery';
@@ -38,12 +38,12 @@ export const TodoApp = () => {
   const loadError = error ? getErrorMessage(error, 'Không tải được danh sách công việc') : '';
   const percentDone = stats.all > 0 ? Math.round((stats.completed / stats.all) * 100) : 0;
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingId(null);
-  };
+  }, []);
 
   // Dùng chung cho lưu chỉnh sửa và tick hoàn thành
-  const handleUpdate = async (id, updateData) => {
+  const handleUpdate = useCallback(async (id, updateData) => {
     const isSuccess = await updateTodo(id, updateData);
 
     if (!isSuccess) {
@@ -57,9 +57,9 @@ export const TodoApp = () => {
       // Chỉ đóng form nếu đang sửa đúng công việc vừa lưu
       setEditingId((prev) => (prev === id ? null : prev));
     }
-  };
+  }, [updateTodo]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     if (!window.confirm('Bạn muốn xóa công việc này?')) {
       return;
     }
@@ -71,7 +71,7 @@ export const TodoApp = () => {
       setEditingId((prev) => (prev === id ? null : prev));
       toast.success('Xóa công việc thành công');
     }
-  };
+  }, [deleteTodo]);
 
   const handleCreate = async (todoData) => {
     const newTodo = await createTodo(todoData);

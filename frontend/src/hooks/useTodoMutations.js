@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSWRConfig } from 'swr';
 import * as todoApi from '../api/todoApi';
 import { handleError } from '../lib/errorHandler';
@@ -14,12 +14,12 @@ export const useTodoMutations = () => {
   const isPendingRef = useRef(false);
 
   // Làm mới MỌI danh sách todo trong cache (mọi trang, mọi tab, mọi từ khóa)
-  const revalidateTodos = () => {
+  const revalidateTodos = useCallback(() => {
     return mutate((key) => Array.isArray(key) && key[0] === TODOS_KEY);
-  };
+  }, [mutate]);
 
   // Khung chung cho sửa / xóa: chặn trùng → gọi API → làm mới → xử lý lỗi
-  const runAction = async (id, action, callApi) => {
+  const runAction = useCallback(async (id, action, callApi) => {
     if (isPendingRef.current) {
       return false;
     }
@@ -38,22 +38,22 @@ export const useTodoMutations = () => {
       isPendingRef.current = false;
       setPending(null);
     }
-  };
+  }, [revalidateTodos]);
 
-  const createTodo = async (todoData) => {
+  const createTodo = useCallback(async (todoData) => {
     // Lỗi ném ra để TodoCreateForm tự xử lý (giữ nguyên dữ liệu đang nhập)
     const newTodo = await todoApi.createTodo(todoData);
     revalidateTodos();
     return newTodo;
-  };
+  }, [revalidateTodos]);
 
-  const updateTodo = (id, updateData) => {
+  const updateTodo = useCallback((id, updateData) => {
     return runAction(id, 'update', () => todoApi.updateTodo(id, updateData));
-  };
+  }, [runAction]);
 
-  const deleteTodo = (id) => {
+  const deleteTodo = useCallback((id) => {
     return runAction(id, 'delete', () => todoApi.deleteTodo(id));
-  };
+  }, [runAction]);
 
   return { pending, createTodo, updateTodo, deleteTodo };
 };
