@@ -11,14 +11,12 @@ import { TodoCreateForm } from '../components/todo/TodoCreateForm';
 import { TodoSearchBar } from '../components/todo/TodoSearchBar';
 import { TodoFilterTabs } from '../components/todo/TodoFilterTabs';
 
-
-import { TodoItem } from '../components/todo/TodoItem';
+import { TodoList } from '../components/todo/TodoList';
 
 import { TodoPagination } from '../components/todo/TodoPagination';
 
 import { TodoErrorBanner } from '../components/todo/TodoErrorBanner';
 
-import { TodoSkeletonList } from '../components/todo/TodoSkeletonList';
 
 import { TodoEmptyState } from '../components/todo/TodoEmptyState';
 
@@ -211,37 +209,25 @@ export const TodoApp = () => {
         {/* Main Todo List Area */}
         <TodoErrorBanner message={loadError} />
 
-        {isLoading ? (
-          <TodoSkeletonList />
-        ) : todoList.length === 0 ? (
-          <TodoEmptyState
-            searchKeyword={searchKeyword}
-            filterTab={filterTab}
-            showCreateButton={!isCreateOpen}
-            onClearSearch={handleClearSearch}
-            onCreate={() => setIsCreateOpen(true)}
-          />
-        ) : (
-          <>
-            <div className="todo-cards-list">
-              {todoList.map((item) => (
-                <TodoItem
-                  key={item.id}
-                  item={item}
-                  isEditing={editingId === item.id}
-                  pendingAction={pending?.id === item.id ? pending.action : null}
-                  isLocked={pending !== null}
-                  onStartEdit={handleStartEdit}
-                  onCancelEdit={handleCancelEdit}
-                  onUpdate={handleUpdate}
-                  onDelete={handleDelete}
-                />
-
-
-              ))}
-            </div>
-          </>
-        )}
+        <TodoList
+          todoList={todoList}
+          isLoading={isLoading}
+          editingId={editingId}
+          pending={pending}
+          onStartEdit={handleStartEdit}
+          onCancelEdit={handleCancelEdit}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+          emptyState={
+            <TodoEmptyState
+              searchKeyword={searchKeyword}
+              filterTab={filterTab}
+              showCreateButton={!isCreateOpen}
+              onClearSearch={handleClearSearch}
+              onCreate={() => setIsCreateOpen(true)}
+            />
+          }
+        />
 
         {/* Giao diện phân trang */}
         <TodoPagination
