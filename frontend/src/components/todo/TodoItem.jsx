@@ -8,119 +8,41 @@ import {
 
 import { formatDueDate, isOverdue } from '../../utils/todoDate';
 
+import { TodoEditForm } from './TodoEditForm';
+
+
 export const TodoItem = ({
-  item, // item
-  isEditing, // editingId === item.id
-  editTitle,
-  editDescription,
-  editDueDate,
-  editErrors,
-  onEditTitleChange, // setEditTitle
-  onEditDescriptionChange, // setEditDescription
-  onEditDueDateChange, // setEditDueDate
-  isUpdating, // updatingId === item.id
-  isDeleting, // deletingId === item.id
-  isDisabledActions, // updatingId !== null || deletingId !== null
-  onStartEdit, // {() => handleStartEdit(item)
-  onCancelEdit, // handleCancelEdit
-  onSaveEdit, // {() => handleSaveEdit(item.id)
-  onToggleStatus, // {(completed) => handleToggleStatus(item, completed)
-  onDelete, // {() => handleDelete(item.id)
+  item,
+  isEditing, // item này đang mở form sửa
+  isUpdating, // item này đang cập nhật
+  isDeleting, // item này đang xóa
+  isDisabledActions, // đang có thao tác bất kỳ → khóa nút Sửa/Xóa
+  onStartEdit, // (id) => ...
+  onCancelEdit, // () => ...
+  onUpdate, // (id, data) => ... dùng cho cả lưu chỉnh sửa và tick hoàn thành
+  onDelete, // (id) => ...
 }) => {
   return (
     <article
-      key={item.id}
       className={`todo-card ${item.completed ? 'is-completed' : ''} ${isOverdue(item) ? 'is-overdue' : ''} ${isEditing ? 'is-editing' : ''}`}
     >
       {isEditing ? (
         /* Form chỉnh sửa trong card */
-        <div className="todo-edit-form">
-          <div className="todo-edit-header">
-            Chỉnh sửa công việc
-          </div>
-
-          <div className="todo-edit-grid">
-            <div className="todo-field">
-              <label htmlFor={`edit-title-${item.id}`}>
-                Tiêu đề <span className="todo-field-req">*</span>
-              </label>
-              <input
-                id={`edit-title-${item.id}`}
-                type="text"
-                value={editTitle}
-                onChange={(event) => onEditTitleChange(event.target.value)}
-                placeholder="Nhập tiêu đề công việc"
-                disabled={isUpdating}
-                className={editErrors.title ? 'has-error' : ''}
-              />
-              {editErrors.title && (
-                <p className="todo-error-text">
-                  <AlertCircle size={14} /> {editErrors.title}
-                </p>
-              )}
-            </div>
-
-            <div className="todo-field">
-              <label htmlFor={`edit-due-date-${item.id}`}>
-                Hạn hoàn thành
-              </label>
-              <input
-                id={`edit-due-date-${item.id}`}
-                type="date"
-                value={editDueDate}
-                onChange={(event) => onEditDueDateChange(event.target.value)}
-                disabled={isUpdating}
-              />
-            </div>
-
-            <div className="todo-field">
-              <label htmlFor={`edit-description-${item.id}`}>
-                Mô tả
-              </label>
-              <textarea
-                id={`edit-description-${item.id}`}
-                rows={3}
-                value={editDescription}
-                onChange={(event) => onEditDescriptionChange(event.target.value)}
-                placeholder="Nhập mô tả"
-                disabled={isUpdating}
-                className={editErrors.description ? 'has-error' : ''}
-              />
-              {editErrors.description && (
-                <p className="todo-error-text">
-                  <AlertCircle size={14} /> {editErrors.description}
-                </p>
-              )}
-            </div>
-
-            <div className="todo-edit-actions">
-              <button
-                type="button"
-                className="todo-btn-save"
-                onClick={onSaveEdit}
-                disabled={isUpdating}
-              >
-                {isUpdating ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
-
-              <button
-                type="button"
-                className="todo-btn-cancel"
-                onClick={onCancelEdit}
-                disabled={isUpdating}
-              >
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
+        <TodoEditForm
+          item={item}
+          onSave={(data) => onUpdate(item.id, data)}
+          onCancel={onCancelEdit}
+          isSaving={isUpdating}
+        />
       ) : (
         /* Hiển thị công việc bình thường */
         <>
           <button
             type="button"
             className={`todo-check-btn ${item.completed ? 'is-checked' : ''}`}
-            onClick={() => onToggleStatus(!item.completed)}
+            onClick={() => onUpdate(item.id, { 
+              completed: !item.completed 
+            })}
             disabled={isUpdating}
             title={item.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
           >
@@ -164,7 +86,8 @@ export const TodoItem = ({
             <button
               type="button"
               className="todo-action-btn todo-action-edit"
-              onClick={onStartEdit}
+              onClick={() => onStartEdit(item.id)}
+
               disabled={isDisabledActions}
               title="Chỉnh sửa công việc"
             >
@@ -175,7 +98,8 @@ export const TodoItem = ({
             <button
               type="button"
               className="todo-action-btn todo-action-delete"
-              onClick={onDelete}
+              onClick={() => onDelete(item.id)}
+
               disabled={isDisabledActions}
               title="Xóa công việc"
             >

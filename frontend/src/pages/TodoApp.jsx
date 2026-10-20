@@ -50,10 +50,6 @@ export const TodoApp = () => {
 
   // State form chỉnh sửa công việc
   const [editingId, setEditingId] = useState(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editDueDate, setEditDueDate] = useState('');
-  const [editErrors, setEditErrors] = useState({});
 
   // State theo dõi tiến trình cập nhật/xóa
   const [updatingId, setUpdatingId] = useState(null);
@@ -64,20 +60,12 @@ export const TodoApp = () => {
     setIsCreateOpen((prev) => !prev); // đang đóng thì bấm sẽ mở, đang mở thì bấm sẽ đóng lại.
   };
 
-  const handleStartEdit = (todo) => { // Chỉnh sửa một công việc đã có
-    setEditingId(todo.id);
-    setEditTitle(todo.title);
-    setEditDescription(todo.description || '');
-    setEditDueDate(todo.dueDate || '');
-    setEditErrors({});
+  const handleStartEdit = (id) => { // Chỉnh sửa một công việc đã có
+    setEditingId(id);
   };
 
   const handleCancelEdit = () => { // Hủy chỉnh sửa công việc
     setEditingId(null);
-    setEditTitle('');
-    setEditDescription('');
-    setEditDueDate('');
-    setEditErrors({});
   };
 
   const handleUpdateTodo = async (id, updateData) => { // Cập nhật dữ liệu công việc
@@ -101,44 +89,20 @@ export const TodoApp = () => {
       setUpdatingId(null);
     }
   };
+  // Dùng chung cho lưu chỉnh sửa và tick hoàn thành
+  const handleUpdate = async (id, updateData) => {
+    const isSuccess = await handleUpdateTodo(id, updateData);
 
-  const handleSaveEdit = async (id) => {
-    const trimmedTitle = editTitle.trim();
-    const trimmedDesc = editDescription.trim();
-    const nextErrors = {};
-
-    if (!trimmedTitle) {
-      nextErrors.title = 'Tiêu đề không được để trống';
-    } else if (trimmedTitle.length > 200) {
-      nextErrors.title = 'Tiêu đề không được vượt quá 200 ký tự';
-    }
-
-    if (trimmedDesc.length > 2000) {
-      nextErrors.description = 'Mô tả không được vượt quá 2.000 ký tự';
-    }
-
-    if (Object.keys(nextErrors).length > 0) {
-      setEditErrors(nextErrors);
-      toast.error('Vui lòng kiểm tra lại thông tin chỉnh sửa');
+    if (!isSuccess) {
       return;
     }
 
-    const isSuccess = await handleUpdateTodo(id, {
-      title: trimmedTitle,
-      description: trimmedDesc || null,
-      dueDate: editDueDate || null,
-    });
-
-    if (isSuccess) {
+    if ('completed' in updateData) {
+      toast.success(updateData.completed ? 'Đã hoàn thành công việc' : 'Đã chuyển về chưa hoàn thành');
+    } else {
       toast.success('Chỉnh sửa công việc thành công');
-      handleCancelEdit();
-    }
-  };
-
-  const handleToggleStatus = async (item, completed) => {
-    const isSuccess = await handleUpdateTodo(item.id, { completed });
-    if (isSuccess) {
-      toast.success(completed ? 'Đã hoàn thành công việc' : 'Đã chuyển về chưa hoàn thành');
+      // Chỉ đóng form nếu đang sửa đúng công việc vừa lưu
+      setEditingId((prev) => (prev === id ? null : prev));
     }
   };
 
@@ -314,22 +278,15 @@ export const TodoApp = () => {
                   key={item.id}
                   item={item}
                   isEditing={editingId === item.id}
-                  editTitle={editTitle}
-                  editDescription={editDescription}
-                  editDueDate={editDueDate}
-                  editErrors={editErrors}
-                  onEditTitleChange={setEditTitle}
-                  onEditDescriptionChange={setEditDescription}
-                  onEditDueDateChange={setEditDueDate}
                   isUpdating={updatingId === item.id}
                   isDeleting={deletingId === item.id}
                   isDisabledActions={updatingId !== null || deletingId !== null}
-                  onStartEdit={() => handleStartEdit(item)}
+                  onStartEdit={handleStartEdit}
                   onCancelEdit={handleCancelEdit}
-                  onSaveEdit={() => handleSaveEdit(item.id)}
-                  onToggleStatus={(completed) => handleToggleStatus(item, completed)}
-                  onDelete={() => handleDelete(item.id)}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
                 />
+
               ))}
             </div>
           </>
