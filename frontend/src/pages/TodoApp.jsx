@@ -22,9 +22,9 @@ import { TodoSkeletonList } from '../components/todo/TodoSkeletonList';
 
 import { TodoEmptyState } from '../components/todo/TodoEmptyState';
 
-import { getTodos, createTodo, updateTodo, deleteTodo } from '../api/todoApi';
-import { handleError, getErrorMessage } from '../lib/errorHandler';
+import { useTodoMutations } from '../hooks/useTodoMutations';
 
+import { getErrorMessage } from '../lib/errorHandler';
 
 const FILTER_TABS = ['all', 'pending', 'completed', 'overdue'];
 
@@ -76,7 +76,6 @@ export const TodoApp = () => {
     stats, 
     isLoading, 
     error, 
-    reload 
   } = useTodos({
     keyword: searchKeyword,
     page: currentPage,
@@ -95,12 +94,8 @@ export const TodoApp = () => {
   // State form chỉnh sửa công việc
   const [editingId, setEditingId] = useState(null);
 
-  // Thao tác đang chạy: { 
-  // id, 
-  // action: 'update' | 'delete' 
-  // } hoặc null
-  const [pending, setPending] = useState(null);
-
+  // Tạo / sửa / xóa: gọi API, khóa nút trong lúc chờ, làm mới danh sách
+  const { pending, createTodo, updateTodo, deleteTodo } = useTodoMutations();
 
   const handleToggleCreate = () => { // Bật tắt form tạo công việc
     setIsCreateOpen((prev) => !prev); // đang đóng thì bấm sẽ mở, đang mở thì bấm sẽ đóng lại.
@@ -114,34 +109,9 @@ export const TodoApp = () => {
     setEditingId(null);
   };
 
-  const handleUpdateTodo = async (id, updateData) => { // Cập nhật dữ liệu công việc
-    if (pending !== null) {
-      return false;
-    }
-
-    setPending({ 
-      id, 
-      action: 'update' 
-    });
-
-    try {
-      await updateTodo(id, updateData);
-
-      reload();
-
-
-      return true;
-      
-    } catch (error) {
-      handleError(error);
-      return false;
-    } finally {
-      setPending(null);
-    }
-  };
   // Dùng chung cho lưu chỉnh sửa và tick hoàn thành
   const handleUpdate = async (id, updateData) => {
-    const isSuccess = await handleUpdateTodo(id, updateData);
+    const isSuccess = await updateTodo(id, updateData);
 
     if (!isSuccess) {
       return;
@@ -157,40 +127,26 @@ export const TodoApp = () => {
   };
 
   const handleDelete = async (id) => {
-    if (pending !== null) {
-      return;
-    }
-
     if (!window.confirm('Bạn muốn xóa công việc này?')) {
       return;
     }
 
-    setPending({ 
-      id, 
-      action: 'delete' 
-    });
+    const isSuccess = await deleteTodo(id);
 
-    try {
-      await deleteTodo(id);
-
-      reload();
-
+    if (isSuccess) {
       // Nếu đang sửa đúng công việc vừa xóa thì đóng form
       setEditingId((prev) => (prev === id ? null : prev));
-
       toast.success('Xóa công việc thành công');
-    } catch (error) {
-      handleError(error);
-    } finally {
-      setPending(null);
     }
   };
+
 
   const handleCreateTodo = async (todoData) => {
     const newTodo = await createTodo(todoData);
 
-    updateQuery({ page: 1 });
-    reload();
+    updateQuery({ 
+      page: 1 
+    });
 
     return newTodo;
   };
