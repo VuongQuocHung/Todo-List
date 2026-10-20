@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  AlertCircle,
-} from "lucide-react";
 
 import { TodoHeader } from '../components/todo/TodoHeader';
 
