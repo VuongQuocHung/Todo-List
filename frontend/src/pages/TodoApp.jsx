@@ -244,9 +244,10 @@ export const TodoApp = () => {
         handleError(error, { 
           silent: true 
         }); // xử lý 401 + log; không toast vì đã có banner
-        
+
         setTodoList([]);
-        setLoadError(error.message);
+        setLoadError(getErrorMessage(error, 'Không tải được danh sách công việc'));
+
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);
