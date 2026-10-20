@@ -19,6 +19,9 @@ import { TodoSkeletonList } from '../components/todo/TodoSkeletonList';
 
 import { TodoEmptyState } from '../components/todo/TodoEmptyState';
 
+import { getTodos, createTodo, updateTodo, deleteTodo } from '../api/todoApi';
+
+
 export const TodoApp = () => {
   // State kiểm soát trạng thái Ẩn / Hiện (Đóng / Mở) của form tạo công việc mới
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -85,24 +88,12 @@ export const TodoApp = () => {
     setUpdatingId(id);
 
     try {
-      const response = await fetch(`/api/todos/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(updateData),
-      });
-
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(result?.error?.message || 'Không cập nhật được công việc');
-      }
+      await updateTodo(id, updateData);
 
       setReloadKey((value) => value + 1);
 
       return true;
+      
     } catch (error) {
       toast.error(error.message);
       return false;
@@ -163,15 +154,7 @@ export const TodoApp = () => {
     setDeletingId(id);
 
     try {
-      const response = await fetch(`/api/todos/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const result = await response.json().catch(() => null);
-        throw new Error(result?.error?.message || 'Không xóa được công việc');
-      }
+      await deleteTodo(id);
 
       setReloadKey((value) => value + 1);
 
@@ -200,25 +183,7 @@ export const TodoApp = () => {
   };
 
   const handleCreateTodo = async (todoData) => {
-    const response = await fetch('/api/todos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(todoData),
-    });
-
-    const result = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      throw new Error(
-        result?.error?.message ||
-        'Không tạo được công việc'
-      );
-    }
-
-    const newTodo = result.data;
+    const newTodo = await createTodo(todoData);
 
     setCurrentPage(1);
     setReloadKey((value) => value + 1);
@@ -237,47 +202,43 @@ export const TodoApp = () => {
   };
 
   useEffect(() => {
-    let ignore = false;
+    // Mỗi lần effect chạy tạo 1 controller; effect chạy lại hoặc unmount → hủy request cũ
+    const controller = new AbortController();
 
     const loadTodos = async () => {
       setIsLoading(true);
       setLoadError('');
 
       try {
-        const params = new URLSearchParams({
-          keyword: searchKeyword,
-          page: String(currentPage),
-          limit: '5',
-          filterTab,
+        const result = await getTodos({  
+          keyword: searchKeyword, 
+          page: currentPage, 
+          limit: '5', 
+          filterTab 
+        },  { 
+          signal: controller.signal 
         });
 
-        const response = await fetch(`/api/todos?${params.toString()}`, {
-          credentials: 'include',
-        });
-
-        const result = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(result?.error?.message || 'Không tải được công việc');
+        if (controller.signal.aborted) {
+          return;
         }
+        setTodoList(result.data);
+        setTotalPages(result.pagination.totalPages);
+        setStats(result.stats);
 
-        if (!ignore) {
-          setTodoList(result.data);
-          setTotalPages(result.pagination.totalPages);
-          setStats(result.stats);
-          // Xóa/sửa phần tử cuối của trang có thể làm giảm tổng số trang.
-          const lastPage = Math.max(1, result.pagination.totalPages);
-          if (currentPage > lastPage) {
-            setCurrentPage(lastPage);
-          }
+        // Xóa/sửa phần tử cuối của trang có thể làm giảm tổng số trang.
+        const lastPage = Math.max(1, result.pagination.totalPages);
+        if (currentPage > lastPage) {
+          setCurrentPage(lastPage);
         }
       } catch (error) {
-        if (!ignore) {
-          setTodoList([]);
-          setLoadError(error.message);
+        if (controller.signal.aborted) {
+          return; // request bị hủy vì đã có request mới hơn → không phải lỗi
         }
+        setTodoList([]);
+        setLoadError(error.message);
       } finally {
-        if (!ignore) {
+        if (!controller.signal.aborted) {
           setIsLoading(false);
         }
       }
@@ -286,7 +247,7 @@ export const TodoApp = () => {
     loadTodos();
 
     return () => {
-      ignore = true;
+      controller.abort();
     };
   }, [searchKeyword, currentPage, filterTab, reloadKey]);
 
@@ -371,16 +332,16 @@ export const TodoApp = () => {
                 />
               ))}
             </div>
-
-            {/* Giao diện phân trang */}
-            <TodoPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              isLoading={isLoading}
-            />
           </>
         )}
+
+        {/* Giao diện phân trang */}
+        <TodoPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          isLoading={isLoading}
+        />
       </div>
     </main>
   );
