@@ -14,14 +14,16 @@ import { TodoEditForm } from './TodoEditForm';
 export const TodoItem = ({
   item,
   isEditing, // item này đang mở form sửa
-  isUpdating, // item này đang cập nhật
-  isDeleting, // item này đang xóa
-  isDisabledActions, // đang có thao tác bất kỳ → khóa nút Sửa/Xóa
+  pendingAction, // 'update' | 'delete' | null — thao tác đang chạy trên item này
+  isLocked, // đang có thao tác bất kỳ → khóa các nút
   onStartEdit, // (id) => ...
   onCancelEdit, // () => ...
-  onUpdate, // (id, data) => ... dùng cho cả lưu chỉnh sửa và tick hoàn thành
+  onUpdate, // (id, data) => ...
   onDelete, // (id) => ...
 }) => {
+  const isUpdating = pendingAction === 'update';
+  const isDeleting = pendingAction === 'delete';
+
   return (
     <article
       className={`todo-card ${item.completed ? 'is-completed' : ''} ${isOverdue(item) ? 'is-overdue' : ''} ${isEditing ? 'is-editing' : ''}`}
@@ -88,7 +90,7 @@ export const TodoItem = ({
               className="todo-action-btn todo-action-edit"
               onClick={() => onStartEdit(item.id)}
 
-              disabled={isDisabledActions}
+              disabled={isLocked}
               title="Chỉnh sửa công việc"
             >
               <Pencil size={14} />
@@ -100,7 +102,7 @@ export const TodoItem = ({
               className="todo-action-btn todo-action-delete"
               onClick={() => onDelete(item.id)}
 
-              disabled={isDisabledActions}
+              disabled={isLocked}
               title="Xóa công việc"
             >
               <Trash2 size={14} />

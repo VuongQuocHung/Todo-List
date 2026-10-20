@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+
 
 import { TodoHeader } from '../components/todo/TodoHeader';
 
@@ -21,6 +23,29 @@ import { TodoEmptyState } from '../components/todo/TodoEmptyState';
 
 import { getTodos, createTodo, updateTodo, deleteTodo } from '../api/todoApi';
 
+const FILTER_TABS = ['all', 'pending', 'completed', 'overdue'];
+
+// Tạo query mới từ query cũ + các thay đổi.
+// Giá trị mặc định (trang 1, tab all, từ khóa rỗng) thì xóa khỏi URL cho gọn.
+const applyQueryChanges = (prev, changes) => {
+  const next = new URLSearchParams(prev);
+
+  Object.entries(changes).forEach(([key, value]) => {
+    const isDefault =
+      value === '' ||
+      (key === 'page' && value === 1) ||
+      (key === 'tab' && value === 'all');
+
+    if (isDefault) {
+      next.delete(key);
+    } else {
+      next.set(key, String(value));
+    }
+  });
+
+  return next;
+};
+
 
 export const TodoApp = () => {
   // State kiểm soát trạng thái Ẩn / Hiện (Đóng / Mở) của form tạo công việc mới
@@ -31,13 +56,21 @@ export const TodoApp = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
-  // State lọc
-  const [keyword, setKeyword] = useState('');
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'pending' | 'completed' | 'overdue'
+  // Trang, tab, từ khóa lưu trên URL → F5 không bị mất, dùng được nút Back
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // State phân trang
-  const [currentPage, setCurrentPage] = useState(1);
+  const searchKeyword = searchParams.get('q') ?? '';
+
+  const tabParam = searchParams.get('tab');
+  const filterTab = FILTER_TABS.includes(tabParam) ? tabParam : 'all';
+
+  const pageParam = Number(searchParams.get('page'));
+  const currentPage = Number.isInteger(pageParam) && pageParam >= 1 ? pageParam : 1;
+
+  const updateQuery = (changes, options) => {
+    setSearchParams((prev) => applyQueryChanges(prev, changes), options);
+  };
+
   const [totalPages, setTotalPages] = useState(0);
   const [reloadKey, setReloadKey] = useState(0); // Tín hiệu tải lại sau khi tạo/sửa/xóa
 
@@ -51,9 +84,12 @@ export const TodoApp = () => {
   // State form chỉnh sửa công việc
   const [editingId, setEditingId] = useState(null);
 
-  // State theo dõi tiến trình cập nhật/xóa
-  const [updatingId, setUpdatingId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
+  // Thao tác đang chạy: { 
+  // id, 
+  // action: 'update' | 'delete' 
+  // } hoặc null
+  const [pending, setPending] = useState(null);
+
 
 
   const handleToggleCreate = () => { // Bật tắt form tạo công việc
@@ -69,11 +105,14 @@ export const TodoApp = () => {
   };
 
   const handleUpdateTodo = async (id, updateData) => { // Cập nhật dữ liệu công việc
-    if (updatingId !== null) {
+    if (pending !== null) {
       return false;
     }
 
-    setUpdatingId(id);
+    setPending({ 
+      id, 
+      action: 'update' 
+    });
 
     try {
       await updateTodo(id, updateData);
@@ -86,7 +125,7 @@ export const TodoApp = () => {
       toast.error(error.message);
       return false;
     } finally {
-      setUpdatingId(null);
+      setPending(null);
     }
   };
   // Dùng chung cho lưu chỉnh sửa và tick hoàn thành
@@ -107,7 +146,7 @@ export const TodoApp = () => {
   };
 
   const handleDelete = async (id) => {
-    if (deletingId !== null) {
+    if (pending !== null) {
       return;
     }
 
@@ -115,45 +154,45 @@ export const TodoApp = () => {
       return;
     }
 
-    setDeletingId(id);
+    setPending({ 
+      id, 
+      action: 'delete' 
+    });
 
     try {
       await deleteTodo(id);
 
       setReloadKey((value) => value + 1);
 
-      if (editingId === id) {
-        handleCancelEdit();
-      }
+      // Nếu đang sửa đúng công việc vừa xóa thì đóng form
+      setEditingId((prev) => (prev === id ? null : prev));
 
       toast.success('Xóa công việc thành công');
     } catch (error) {
       toast.error(error.message);
     } finally {
-      setDeletingId(null);
+      setPending(null);
     }
-  };
-
-  const handleSearch = () => {
-    handleCancelEdit();
-    setSearchKeyword(keyword.trim());
-    setCurrentPage(1);
-  };
-
-  const handleClearSearch = () => {
-    setKeyword('');
-    setSearchKeyword('');
-    setCurrentPage(1);
   };
 
   const handleCreateTodo = async (todoData) => {
     const newTodo = await createTodo(todoData);
 
-    setCurrentPage(1);
+    updateQuery({ page: 1 });
     setReloadKey((value) => value + 1);
 
     return newTodo;
   };
+
+  const handleSearch = (value) => {
+    handleCancelEdit();
+    updateQuery({ q: value, page: 1 });
+  };
+
+  const handleClearSearch = () => {
+    updateQuery({ q: '', page: 1 });
+  };
+
 
   // Thống kê & Lọc danh sách
   const totalCount = stats.all;
@@ -162,7 +201,7 @@ export const TodoApp = () => {
 
   const handlePageChange = (page) => {
     handleCancelEdit(); // đóng form sửa trước khi chuyển trang.
-    setCurrentPage(page);
+    updateQuery({ page });
   };
 
   useEffect(() => {
@@ -193,7 +232,8 @@ export const TodoApp = () => {
         // Xóa/sửa phần tử cuối của trang có thể làm giảm tổng số trang.
         const lastPage = Math.max(1, result.pagination.totalPages);
         if (currentPage > lastPage) {
-          setCurrentPage(lastPage);
+          // replace: thay URL hiện tại, không thêm vào lịch sử → Back không quay về trang không tồn tại
+          setSearchParams((prev) => applyQueryChanges(prev, { page: lastPage }), { replace: true });
         }
       } catch (error) {
         if (controller.signal.aborted) {
@@ -213,7 +253,7 @@ export const TodoApp = () => {
     return () => {
       controller.abort();
     };
-  }, [searchKeyword, currentPage, filterTab, reloadKey]);
+  }, [searchKeyword, currentPage, filterTab, reloadKey, setSearchParams]);
 
 
   return (
@@ -241,18 +281,14 @@ export const TodoApp = () => {
         {/* Toolbar: Tìm kiếm & Tab lọc */}
         <section className="todo-toolbar">
           <TodoSearchBar
-            keyword={keyword}
-            onKeywordChange={setKeyword}
+            searchKeyword={searchKeyword}
             onSearch={handleSearch}
             onClear={handleClearSearch}
           />
           <TodoFilterTabs
             filterTab={filterTab}
             stats={stats}
-            onFilterChange={(tab) => {
-              setFilterTab(tab);
-              setCurrentPage(1);
-            }}
+            onFilterChange={(tab) => updateQuery({ tab, page: 1 })}
           />
         </section>
 
@@ -278,14 +314,14 @@ export const TodoApp = () => {
                   key={item.id}
                   item={item}
                   isEditing={editingId === item.id}
-                  isUpdating={updatingId === item.id}
-                  isDeleting={deletingId === item.id}
-                  isDisabledActions={updatingId !== null || deletingId !== null}
+                  pendingAction={pending?.id === item.id ? pending.action : null}
+                  isLocked={pending !== null}
                   onStartEdit={handleStartEdit}
                   onCancelEdit={handleCancelEdit}
                   onUpdate={handleUpdate}
                   onDelete={handleDelete}
                 />
+
 
               ))}
             </div>
