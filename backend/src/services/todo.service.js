@@ -1,6 +1,7 @@
 const userRepository = require('../repositories/user.repository');
 const todoRepository = require('../repositories/todo.repository');
 const todoCache = require('../caches/todo.cache');
+const { withCache } = require('../caches/cache');
 
 module.exports.createPost = async (userId, { title, description, dueDate }) => {
   const user = await userRepository.findUserById(userId);
@@ -21,26 +22,13 @@ module.exports.createPost = async (userId, { title, description, dueDate }) => {
     dueDate || null
   );
 
-  await todoCache.bumpListVersion(userId); // có công việc mới → danh sách cũ không còn đúng
+  await todoCache.invalidateTodoLists(userId); // có công việc mới → danh sách cũ không còn đúng
 
   return todo;
-
 };
 
-module.exports.getTodos = async (userId, { page, limit, keyword, filterTab }) => {
-  // 1. Thử đọc cache trước
-  const { data: cachedList, cacheKey } = await todoCache.getList(userId, {
-    page,
-    limit,
-    keyword,
-    filterTab,
-  });
-
-  if (cachedList) {
-    return cachedList;
-  }
-
-  // 2. Cache miss → đọc database
+// ===== Hàm tính toán "thuần" — chỉ đọc database, không biết gì về cache =====
+const buildTodoPage = async (userId, { page, limit, keyword, filterTab }) => {
   const offset = (page - 1) * limit;
 
   const result = await todoRepository.findTodosByUserId(userId, {
@@ -50,7 +38,7 @@ module.exports.getTodos = async (userId, { page, limit, keyword, filterTab }) =>
     offset,
   });
 
-  const response = {
+  return {
     data: result.todos,
     pagination: {
       page,
@@ -60,11 +48,31 @@ module.exports.getTodos = async (userId, { page, limit, keyword, filterTab }) =>
     },
     stats: result.stats,
   };
+};
 
-  // 3. Lưu cache bằng đúng key đã tính ở bước 1
-  await todoCache.setList(cacheKey, response);
+// ===== Gắn cache vào hàm tính toán (giống function_cached(fibo)) =====
+const findTodoByIdCached = withCache(todoRepository.findTodoById, {
+  buildKey: todoCache.buildTodoKey,
+});
 
-  return response;
+const buildTodoPageCached = withCache(buildTodoPage, {
+  buildKey: todoCache.buildListKey,
+});
+
+module.exports.getTodos = (userId, query) => buildTodoPageCached(userId, query);
+
+module.exports.getTodoById = async (userId, todoId) => {
+  const todo = await findTodoByIdCached(userId, todoId);
+
+  if (!todo) {
+    // Không tìm thấy → withCache đã không lưu null vào cache
+    const error = new Error('Không tìm thấy công việc');
+    error.statusCode = 404;
+    error.code = 'TODO_NOT_FOUND';
+    throw error;
+  }
+
+  return todo;
 };
 
 
@@ -79,10 +87,8 @@ module.exports.updateTodo = async (userId, todoId, updateData) => {
   }
 
   // Dữ liệu đã đổi → xóa bản cũ trong cache
-  await todoCache.deleteTodo(userId, todoId);
-  await todoCache.bumpListVersion(userId);
-
-  return todo;
+  await todoCache.invalidateTodo(userId, todoId);
+  await todoCache.invalidateTodoLists(userId);
 
   return todo;
 };
@@ -99,32 +105,8 @@ module.exports.deleteTodo = async (userId, todoId) => {
   }
 
   // Công việc đã bị xóa → xóa luôn cache để lần đọc sau trả 404
-  await todoCache.deleteTodo(userId, todoId);
-  await todoCache.bumpListVersion(userId);
-
+  await todoCache.invalidateTodo(userId, todoId);
+  await todoCache.invalidateTodoLists(userId);
 }
 
-module.exports.getTodoById = async (userId, todoId) => {
-  // 1. Thử đọc cache trước
-  const cachedTodo = await todoCache.getTodo(userId, todoId);
-
-  if (cachedTodo) {
-    return cachedTodo;
-  }
-
-  // 2. Cache miss → đọc database (lọc theo cả id và user_id)
-  const todo = await todoRepository.findTodoById(userId, todoId);
-
-  if (!todo) {
-    const error = new Error('Không tìm thấy công việc');
-    error.statusCode = 404;
-    error.code = 'TODO_NOT_FOUND';
-    throw error; // không ghi cache cho trường hợp không tìm thấy
-  }
-
-  // 3. Lưu vào cache cho lần đọc sau
-  await todoCache.setTodo(userId, todo);
-
-  return todo;
-};
 
