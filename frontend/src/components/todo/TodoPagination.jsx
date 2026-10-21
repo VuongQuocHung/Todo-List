@@ -1,5 +1,8 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+const navButtonClass =
+  'flex items-center gap-1 rounded bg-surface-container-low px-2 py-1 font-medium text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:text-outline disabled:opacity-50 disabled:hover:bg-surface-container-low';
+
 export const TodoPagination = ({
   currentPage = 1,
   totalPages = 1,
@@ -43,51 +46,55 @@ export const TodoPagination = ({
   };
 
   return (
-    <nav className="todo-pagination">
-      <div className="todo-pagination-info">
-        Trang <strong>{currentPage}</strong>
+    <nav
+      className="flex w-full flex-col items-center justify-between gap-3 pt-1 text-xs font-medium text-on-surface-variant sm:flex-row"
+      aria-label="Phân trang"
+    >
+      <div>
+        Trang <strong className="font-semibold text-on-surface">{currentPage}</strong>
         {' / '}
-        <strong>{totalPages}</strong>
+        <strong className="font-semibold text-on-surface">{totalPages}</strong>
       </div>
 
-      <div className="todo-pagination-controls">
+      <div className="flex flex-wrap items-center justify-center gap-1">
         <button
           type="button"
-          className="todo-page-btn todo-page-nav"
+          className={navButtonClass}
           onClick={() => handlePageChange(currentPage - 1)}
           disabled={isLoading || currentPage <= 1}>
           <ChevronLeft size={16} />
           <span>Trước</span>
         </button>
 
-        <div className="todo-page-numbers">
-          {pages.map((page, index) =>
-            page === '...' ? (
-              <span
-                key={`ellipsis-${index}`}
-                className="todo-page-ellipsis"
-              >
-                …
-              </span>
-            ) : (
-              <button
-                key={page}
-                type="button"
-                className={`todo-page-btn todo-page-number ${
-                  page === currentPage ? 'is-active' : ''
-                }`}
-                onClick={() => handlePageChange(page)}
-                disabled={isLoading}
-              >
-                {page}
-              </button>
-            )
-          )}
-        </div>
+        {pages.map((page, index) =>
+          page === '...' ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="w-6 text-center text-outline"
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={page}
+              type="button"
+              className={`flex h-8 w-8 items-center justify-center rounded transition-colors disabled:cursor-not-allowed ${
+                page === currentPage
+                  ? 'bg-primary font-semibold text-on-primary shadow-sm'
+                  : 'font-medium text-on-surface hover:bg-surface-container-high'
+              }`}
+              onClick={() => handlePageChange(page)}
+              disabled={isLoading}
+              aria-current={page === currentPage ? 'page' : undefined}
+            >
+              {page}
+            </button>
+          )
+        )}
 
         <button
           type="button"
-          className="todo-page-btn todo-page-nav"
+          className={navButtonClass}
           onClick={() => handlePageChange(currentPage + 1)}
           disabled={isLoading || currentPage >= totalPages}
         >

@@ -6,8 +6,8 @@ export const TodoErrorBanner = ({message}) => {
   }
 
   return (
-    <div className="todo-error-banner">
-      <AlertCircle size={16} />
+    <div className="flex w-full items-center gap-2 rounded-lg bg-error-container px-3 py-2 text-on-error-container shadow-sm">
+      <AlertCircle size={20} className="shrink-0 text-error" />
       <span>{message}</span>
     </div>
   )

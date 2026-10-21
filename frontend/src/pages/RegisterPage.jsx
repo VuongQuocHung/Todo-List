@@ -1,8 +1,16 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import '../App.css';
+import { AtSign, Eye, EyeOff, IdCard, Info, KeyRound, Loader2, Lock, Mail, UserCheck, UserPlus } from 'lucide-react';
+
+// Ô nhập lỗi → viền đỏ; bình thường → viền xám nhạt
+const getInputClass = (error, paddingRight = 'pr-3') =>
+  `h-10 w-full rounded-lg bg-surface-container-lowest pl-9 ${paddingRight} text-on-surface shadow-sm outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary-container ${
+    error ? 'ring-2 ring-error' : 'ring-1 ring-outline-variant/60'
+  }`;
 
 export const RegisterPage = () => {
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [fullname, setFullname] = useState('');
   const [email, setEmail] = useState('');
@@ -98,101 +106,146 @@ export const RegisterPage = () => {
   };
 
   return (
-    <main className="register-page">
-      <form className="register-card" onSubmit={handleSubmit} noValidate>
-        <h1>Đăng ký</h1>
-
-        <div className="register-field">
-          <label htmlFor="username">Username</label>
-          <input
-            type="text"
-            name="username"
-            id="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="Username"
-            aria-invalid={Boolean(errors.username)}
-            aria-describedby={errors.username ? 'username-error' : undefined}
-          />
-          {errors.username && (
-            <p id="username-error" className="register-field-error">
-              {errors.username}
-            </p>
-          )}
+    <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-6 md:px-8">
+      <div className="flex w-full max-w-[440px] flex-col gap-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-surface-container text-primary shadow-sm">
+            <UserPlus size={26} />
+          </div>
+          <h1 className="text-xl font-semibold tracking-tight text-on-surface">Tạo tài khoản mới</h1>
+          <p className="mt-1 text-on-surface-variant">
+            Bắt đầu quản lý công việc hiệu quả và tập trung hơn
+          </p>
         </div>
 
-        <div className="register-field">
-          <label htmlFor="fullname">Họ tên (không bắt buộc)</label>
-          <input
-            type="text"
-            name="fullname"
-            id="fullname"
-            value={fullname}
-            onChange={(event) => setFullname(event.target.value)}
-            placeholder="Họ tên"
-            aria-invalid={Boolean(errors.fullname)}
-            aria-describedby={errors.fullname ? 'fullname-error' : undefined}
-          />
-          {errors.fullname && (
-            <p id="fullname-error" className="register-field-error">
-              {errors.fullname}
-            </p>
-          )}
+        <div className="rounded-lg bg-surface-container-lowest p-6 shadow-sm">
+          <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
+            <Field id="username" label="Tên người dùng" required icon={AtSign} error={errors.username}>
+              <input
+                className={getInputClass(errors.username)}
+                type="text"
+                name="username"
+                id="username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Ví dụ: annguyen"
+                aria-invalid={Boolean(errors.username)}
+                aria-describedby={errors.username ? 'username-error' : undefined}
+              />
+            </Field>
+
+            <Field id="fullname" label="Họ và tên" hint="(Không bắt buộc)" icon={IdCard} error={errors.fullname}>
+              <input
+                className={getInputClass(errors.fullname)}
+                type="text"
+                name="fullname"
+                id="fullname"
+                value={fullname}
+                onChange={(event) => setFullname(event.target.value)}
+                placeholder="Ví dụ: Nguyễn Văn An"
+                aria-invalid={Boolean(errors.fullname)}
+                aria-describedby={errors.fullname ? 'fullname-error' : undefined}
+              />
+            </Field>
+
+            <Field id="email" label="Email" required icon={Mail} error={errors.email}>
+              <input
+                className={getInputClass(errors.email)}
+                type="email"
+                name="email"
+                id="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="vidu@congty.com"
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'email-error' : undefined}
+              />
+            </Field>
+
+            <Field id="password" label="Mật khẩu" required icon={Lock} error={errors.password}>
+              <input
+                className={getInputClass(errors.password, 'pr-10')}
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                id="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? 'password-error' : 'password-hint'}
+              />
+              <button
+                className="absolute right-2.5 flex items-center justify-center rounded p-1 text-on-surface-variant transition-colors hover:text-on-surface"
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </Field>
+            {!errors.password && (
+              <p id="password-hint" className="-mt-2 flex items-center gap-1 text-xs text-on-surface-variant">
+                <Info size={14} />
+                Tối thiểu 8 ký tự
+              </p>
+            )}
+
+            <Field id="confirm-password" label="Xác nhận mật khẩu" required icon={KeyRound} error={errors.confirmPassword}>
+              <input
+                className={getInputClass(errors.confirmPassword)}
+                type="password"
+                name="confirmPassword"
+                id="confirm-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="••••••••"
+                aria-invalid={Boolean(errors.confirmPassword)}
+                aria-describedby={errors.confirmPassword ? 'confirm-password-error' : undefined}
+              />
+            </Field>
+
+            <button
+              className="mt-2 flex h-11 w-full items-center justify-center gap-1 rounded-lg bg-primary-container font-medium text-on-primary shadow-sm transition-all hover:bg-primary active:scale-[0.99] disabled:cursor-wait disabled:opacity-65"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <UserCheck size={18} />}
+              <span>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}</span>
+            </button>
+          </form>
         </div>
 
-        <div className="register-field">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            name="email"
-            id="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="Email"
-            aria-invalid={Boolean(errors.email)}
-            aria-describedby={errors.email ? 'email-error' : undefined}
-          />
-          {errors.email && <p id="email-error" className="register-field-error">{errors.email}</p>}
+        <div className="flex items-center justify-center gap-1.5 text-on-surface-variant">
+          <span>Đã có tài khoản?</span>
+          <Link className="font-medium text-primary hover:underline" to="/login">
+            Đăng nhập
+          </Link>
         </div>
-
-        <div className="register-field">
-          <label htmlFor="password">Mật khẩu</label>
-          <input
-            type="password"
-            name="password"
-            id="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Mật khẩu"
-            aria-invalid={Boolean(errors.password)}
-            aria-describedby={errors.password ? 'password-error' : undefined}
-          />
-          {errors.password && <p id="password-error" className="register-field-error">{errors.password}</p>}
-        </div>
-
-        <div className="register-field">
-          <label htmlFor="confirm-password">Xác nhận mật khẩu</label>
-          <input
-            type="password"
-            name="confirmPassword"
-            id="confirm-password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            placeholder="Xác nhận mật khẩu"
-            aria-invalid={Boolean(errors.confirmPassword)}
-            aria-describedby={errors.confirmPassword ? 'confirm-password-error' : undefined}
-          />
-          {errors.confirmPassword && (
-            <p id="confirm-password-error" className="register-field-error">
-              {errors.confirmPassword}
-            </p>
-          )}
-        </div>
-
-        <button className="register-submit" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
-        </button>
-      </form>
+      </div>
     </main>
+  );
+};
+
+// Khung chung cho 1 ô nhập: nhãn + icon bên trái + dòng báo lỗi
+const Field = ({ id, label, required, hint, icon: Icon, error, children }) => {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-1 font-medium text-on-surface" htmlFor={id}>
+          <span>{label}</span>
+          {required && <span className="text-error">*</span>}
+        </label>
+        {hint && <span className="text-xs text-on-surface-variant">{hint}</span>}
+      </div>
+      <div className="relative flex items-center">
+        <Icon size={18} className="pointer-events-none absolute left-3 text-on-surface-variant" />
+        {children}
+      </div>
+      {error && (
+        <p id={`${id}-error`} className="mt-0.5 text-xs text-error">
+          {error}
+        </p>
+      )}
+    </div>
   );
 };

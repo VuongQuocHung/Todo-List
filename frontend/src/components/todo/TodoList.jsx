@@ -21,7 +21,8 @@ export const TodoList = ({
   }
 
   return (
-    <div className="todo-cards-list">
+    // divide-y: kẻ 1 đường mảnh giữa các công việc
+    <section className="flex w-full flex-col divide-y divide-surface-container-high overflow-hidden rounded-xl bg-surface-container-lowest shadow-sm">
       {todoList.map((item) => (
         <TodoItem
           key={item.id}
@@ -35,6 +36,6 @@ export const TodoList = ({
           onDelete={onDelete}
         />
       ))}
-    </div>
+    </section>
   );
 };

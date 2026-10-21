@@ -1,6 +1,14 @@
 import { useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CalendarDays, FilePen } from 'lucide-react';
 import { toast } from 'sonner';
+
+const labelClass = 'mb-1 block text-[11px] font-semibold text-on-surface';
+const errorTextClass = 'mt-1 flex items-center gap-1 text-xs text-error';
+
+const getFieldClass = (error) =>
+  `w-full rounded bg-surface-container-low px-3 py-1.5 text-on-surface outline-none disabled:opacity-60 ${
+    error ? 'ring-2 ring-error' : 'focus:ring-2 focus:ring-primary/20'
+  }`;
 
 export const TodoEditForm = ({
   item, // công việc đang sửa
@@ -45,34 +53,56 @@ export const TodoEditForm = ({
   };
 
   return (
-    <form className="todo-edit-form" onSubmit={handleSubmit}>
-      <div className="todo-edit-header">
+    <form className="flex flex-col gap-2 rounded-lg bg-surface-container-lowest p-3 shadow-sm" onSubmit={handleSubmit}>
+      <span className="flex items-center gap-1 text-xs font-semibold text-primary">
+        <FilePen size={16} />
         Chỉnh sửa công việc
+      </span>
+
+      <div>
+        <label className={labelClass} htmlFor={`edit-title-${item.id}`}>
+          Tiêu đề <span className="text-error">*</span>
+        </label>
+        <input
+          id={`edit-title-${item.id}`}
+          type="text"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Nhập tiêu đề công việc"
+          disabled={isSaving}
+          className={getFieldClass(errors.title)}
+        />
+        {errors.title && (
+          <p className={errorTextClass}>
+            <AlertCircle size={14} /> {errors.title}
+          </p>
+        )}
       </div>
 
-      <div className="todo-edit-grid">
-        <div className="todo-field">
-          <label htmlFor={`edit-title-${item.id}`}>
-            Tiêu đề <span className="todo-field-req">*</span>
-          </label>
-          <input
-            id={`edit-title-${item.id}`}
-            type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Nhập tiêu đề công việc"
-            disabled={isSaving}
-            className={errors.title ? 'has-error' : ''}
-          />
-          {errors.title && (
-            <p className="todo-error-text">
-              <AlertCircle size={14} /> {errors.title}
-            </p>
-          )}
-        </div>
+      <div>
+        <label className={labelClass} htmlFor={`edit-description-${item.id}`}>
+          Mô tả
+        </label>
+        <textarea
+          id={`edit-description-${item.id}`}
+          rows={2}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Nhập mô tả"
+          disabled={isSaving}
+          className={`${getFieldClass(errors.description)} resize-none`}
+        />
+        {errors.description && (
+          <p className={errorTextClass}>
+            <AlertCircle size={14} /> {errors.description}
+          </p>
+        )}
+      </div>
 
-        <div className="todo-field">
-          <label htmlFor={`edit-due-date-${item.id}`}>
+      <div className="flex flex-col justify-between gap-2 pt-1 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-1">
+          <CalendarDays size={16} className="text-on-surface-variant" />
+          <label className="sr-only" htmlFor={`edit-due-date-${item.id}`}>
             Hạn hoàn thành
           </label>
           <input
@@ -81,41 +111,25 @@ export const TodoEditForm = ({
             value={dueDate}
             onChange={(event) => setDueDate(event.target.value)}
             disabled={isSaving}
+            className="rounded bg-surface-container-low px-2 py-1 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
-        <div className="todo-field">
-          <label htmlFor={`edit-description-${item.id}`}>
-            Mô tả
-          </label>
-          <textarea
-            id={`edit-description-${item.id}`}
-            rows={3}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Nhập mô tả"
-            disabled={isSaving}
-            className={errors.description ? 'has-error' : ''}
-          />
-          {errors.description && (
-            <p className="todo-error-text">
-              <AlertCircle size={14} /> {errors.description}
-            </p>
-          )}
-        </div>
-
-        <div className="todo-edit-actions">
-          <button type="submit" className="todo-btn-save" disabled={isSaving}>
-            {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </button>
-
+        <div className="flex items-center justify-end gap-1">
           <button
             type="button"
-            className="todo-btn-cancel"
+            className="rounded bg-surface-container-high px-3 py-1.5 text-xs font-medium text-on-surface transition-colors hover:bg-surface-variant disabled:opacity-50"
             onClick={onCancel}
             disabled={isSaving}
           >
             Hủy
+          </button>
+          <button
+            type="submit"
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSaving}
+          >
+            {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
           </button>
         </div>
       </div>

@@ -4,17 +4,33 @@ import { getTodos } from '../api/todoApi';
 export const TODOS_KEY = 'todos';
 const PAGE_SIZE = 5;
 
-// Giá trị mặc định đặt ngoài hook → giữ nguyên tham chiếu giữa các lần render
+// Giá trị mặc định đặt ngoài hook, giữ nguyên tham chiếu giữa các lần render
 const EMPTY_LIST = [];
 const EMPTY_STATS = { all: 0, pending: 0, completed: 0, overdue: 0 };
 
-export const useTodos = ({ keyword, page, filterTab, onPageOverflow }) => {
-  const { data, error, isLoading, mutate } = useSWR(
-    // Key: từ khóa / trang / tab đổi → SWR tự tải lại; mỗi tổ hợp có cache riêng
-    [TODOS_KEY, { keyword, page, limit: PAGE_SIZE, filterTab }],
+export const useTodos = ({ 
+  keyword, 
+  page, 
+  filterTab, 
+  onPageOverflow 
+}) => {
+  const { 
+    data, 
+    error, 
+    isLoading, 
+    mutate 
+  } = useSWR(
+    [
+      TODOS_KEY, { // Key: từ khóa / trang / tab đổi thì SWR tự tải lại; mỗi tổ hợp có cache riêng
+        keyword, 
+        page, 
+        limit: PAGE_SIZE, 
+        filterTab 
+      }
+    ],
     ([, params]) => getTodos(params),
     {
-      // Đang tải trang mới vẫn giữ danh sách cũ trên màn hình → không nháy skeleton
+      // Đang tải trang mới vẫn giữ danh sách cũ trên màn hình, không nháy skeleton
       keepPreviousData: true,
 
       onSuccess: (result) => {
@@ -26,6 +42,13 @@ export const useTodos = ({ keyword, page, filterTab, onPageOverflow }) => {
       },
     },
   );
+
+  console.log('[SWR] Dữ liệu đang dùng:', {
+    keyword,
+    page,
+    filterTab,
+    data,
+  });
 
   return {
     todoList: data?.data ?? EMPTY_LIST,

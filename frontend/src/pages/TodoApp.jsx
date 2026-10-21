@@ -24,16 +24,31 @@ export const TodoApp = () => {
   const { searchKeyword, filterTab, currentPage, updateQuery } = useTodoQuery();
 
   // Danh sách công việc: SWR tự lo tải, cache, lỗi, tải lại
-  const { todoList, totalPages, stats, isLoading, error } = useTodos({
+  const { 
+    todoList, 
+    totalPages, 
+    stats, 
+    isLoading, 
+    error 
+  } = useTodos({
     keyword: searchKeyword,
     page: currentPage,
     filterTab,
-    // Trang hiện tại không còn tồn tại → lùi về trang cuối (replace: Back không quay lại trang đó)
-    onPageOverflow: (lastPage) => updateQuery({ page: lastPage }, { replace: true }),
+    // Trang hiện tại không còn tồn tại thì lùi về trang cuối
+    onPageOverflow: (lastPage) => updateQuery({ 
+      page: lastPage 
+    }, { 
+      replace: true 
+    }),
   });
 
   // Tạo / sửa / xóa: gọi API, khóa nút trong lúc chờ, làm mới danh sách
-  const { pending, createTodo, updateTodo, deleteTodo } = useTodoMutations();
+  const { 
+    pending, 
+    createTodo, 
+    updateTodo, 
+    deleteTodo 
+  } = useTodoMutations();
 
   const loadError = error ? getErrorMessage(error, 'Không tải được danh sách công việc') : '';
   const percentDone = stats.all > 0 ? Math.round((stats.completed / stats.all) * 100) : 0;
@@ -80,6 +95,12 @@ export const TodoApp = () => {
   };
 
   const handleSearch = (value) => {
+    console.log('Đã bấm tìm kiếm:', {
+      value,
+      searchKeyword,
+      currentPage,
+    });
+    
     handleCancelEdit();
     updateQuery({ q: value, page: 1 });
   };
@@ -94,8 +115,8 @@ export const TodoApp = () => {
   };
 
   return (
-    <main className="todo-page">
-      <div className="todo-container">
+    <main className="w-full px-4 py-6 sm:py-8">
+      <div className="mx-auto flex w-full max-w-[840px] flex-col gap-4">
         <TodoHeader
           totalCount={stats.all}
           completedCount={stats.completed}
@@ -112,7 +133,7 @@ export const TodoApp = () => {
           />
         )}
 
-        <section className="todo-toolbar">
+        <section className="flex flex-col gap-3">
           <TodoSearchBar
             searchKeyword={searchKeyword}
             onSearch={handleSearch}

@@ -16,40 +16,38 @@ export const TodoEmptyState = ({
   onCreate, // mở form tạo công việc
 }) => {
   return (
-    <div className="todo-state-box">
-      <div className="todo-state-icon">
-        <ClipboardCheck size={28} />
+    <div className="flex w-full flex-col items-center justify-center rounded-xl bg-surface-container-lowest p-8 text-center shadow-sm">
+      <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-surface-container text-outline">
+        <ClipboardCheck size={30} />
       </div>
 
-      <h3 className="todo-state-title">
+      <h3 className="mb-1 text-lg font-semibold text-on-surface">
         {searchKeyword ? 'Không tìm thấy công việc phù hợp' : EMPTY_TITLES[filterTab]}
       </h3>
 
-      <p className="todo-state-desc">
+      <p className="mb-3 max-w-sm text-on-surface-variant">
         {searchKeyword
           ? `Không có kết quả cho từ khóa "${searchKeyword}". Thử tìm kiếm với từ khóa khác.`
           : 'Hãy thêm các mục tiêu và kế hoạch cần làm để theo dõi tiến độ mỗi ngày.'}
       </p>
 
-      <div className="todo-state-action">
-        {searchKeyword ? (
-          <button
-            type="button"
-            className="todo-btn-cancel"
-            onClick={onClearSearch}
-          >
-            Xóa tìm kiếm
-          </button>
-        ) : showCreateButton ? (
-          <button
-            type="button"
-            className="todo-btn-submit"
-            onClick={onCreate}
-          >
-            <Plus size={16} /> Thêm công việc ngay
-          </button>
-        ) : null}
-      </div>
+      {searchKeyword ? (
+        <button
+          type="button"
+          className="rounded-lg bg-surface-container-high px-3 py-2 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-variant"
+          onClick={onClearSearch}
+        >
+          Xóa tìm kiếm
+        </button>
+      ) : showCreateButton ? (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-lg bg-secondary-container px-3 py-2 text-xs font-semibold text-on-secondary-container transition-colors hover:bg-secondary-fixed"
+          onClick={onCreate}
+        >
+          <Plus size={16} /> Tạo việc mới ngay
+        </button>
+      ) : null}
     </div>
   );
 };
