@@ -1,11 +1,14 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useContext, useRef, useState } from 'react';
 import { useSWRConfig } from 'swr';
 import * as todoApi from '../api/todoApi';
 import { handleError } from '../lib/errorHandler';
 import { TODOS_KEY } from './useTodos';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const useTodoMutations = () => {
   const { mutate } = useSWRConfig();
+  const { user } = useContext(AuthContext);
+  const userId = user?.id;
 
   // Thao tác đang chạy: { id, action: 'update' | 'delete' } hoặc null → để giao diện khóa nút
   const [pending, setPending] = useState(null);
@@ -13,10 +16,11 @@ export const useTodoMutations = () => {
   // Cờ chặn bấm trùng: ref đổi NGAY, không phải chờ render lại như state
   const isPendingRef = useRef(false);
 
-  // Làm mới MỌI danh sách todo trong cache (mọi trang, mọi tab, mọi từ khóa)
+  // Làm mới mọi danh sách todo của tài khoản thực hiện thao tác.
   const revalidateTodos = useCallback(() => {
-    return mutate((key) => Array.isArray(key) && key[0] === TODOS_KEY);
-  }, [mutate]);
+    if (userId == null) return;
+    return mutate((key) => Array.isArray(key) && key[0] === TODOS_KEY && key[1] === userId);
+  }, [mutate, userId]);
 
   // Khung chung cho sửa / xóa: chặn trùng → gọi API → làm mới → xử lý lỗi
   const runAction = useCallback(async (id, action, callApi) => {

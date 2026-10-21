@@ -1,5 +1,7 @@
+import { useContext } from 'react';
 import useSWR from 'swr';
 import { getTodos } from '../api/todoApi';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const TODOS_KEY = 'todos';
 const PAGE_SIZE = 5;
@@ -14,21 +16,23 @@ export const useTodos = ({
   filterTab, 
   onPageOverflow 
 }) => {
+  const { user, isAuthLoading } = useContext(AuthContext);
+  const userId = user?.id;
   const { 
-    data, 
+    data: cachedData,
     error, 
     isLoading, 
     mutate 
   } = useSWR(
-    [
-      TODOS_KEY, { // Key: từ khóa / trang / tab đổi thì SWR tự tải lại; mỗi tổ hợp có cache riêng
+    !isAuthLoading && userId != null ? [
+      TODOS_KEY, userId, { // Cache riêng theo user, từ khóa, trang và tab
         keyword, 
         page, 
         limit: PAGE_SIZE, 
         filterTab 
       }
-    ],
-    ([, params]) => getTodos(params),
+    ] : null,
+    async ([, ownerId, params]) => ({ ...await getTodos(params), ownerId }),
     {
       // Đang tải trang mới vẫn giữ danh sách cũ trên màn hình, không nháy skeleton
       keepPreviousData: true,
@@ -43,6 +47,11 @@ export const useTodos = ({
     },
   );
 
+  // keepPreviousData chỉ được giữ dữ liệu của cùng tài khoản.
+  const data = !isAuthLoading && userId != null && cachedData?.ownerId === userId
+    ? cachedData
+    : undefined;
+
   console.log('[SWR] Dữ liệu đang dùng:', {
     keyword,
     page,
@@ -54,7 +63,7 @@ export const useTodos = ({
     todoList: data?.data ?? EMPTY_LIST,
     totalPages: data?.pagination.totalPages ?? 0,
     stats: data?.stats ?? EMPTY_STATS,
-    isLoading, // chỉ true khi CHƯA có dữ liệu nào để hiện (lần tải đầu)
+    isLoading: isAuthLoading || isLoading,
     error,
     reload: mutate, // gọi sau khi tạo/sửa/xóa để tải lại danh sách
   };
