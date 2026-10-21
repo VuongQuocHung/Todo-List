@@ -113,7 +113,6 @@ module.exports.updateTodo = (req, res, next) => {
 
 module.exports.createPost = (req, res, next) => {
   const result = createSchema.safeParse(req.body);
-  console.log(result);
   if (!result.success) {
     return res.status(400).json({
       error: {
@@ -142,7 +141,6 @@ module.exports.deleteTodo = (req, res, next) => {
 
 module.exports.getList = (req, res, next) => {
   const result = listQuerySchema.safeParse(req.query);
-  console.log("result:", result);
 
   if (!result.success) {
     return res.status(400).json({
@@ -154,8 +152,6 @@ module.exports.getList = (req, res, next) => {
   }
 
   req.validatedQuery  = result.data;
-  console.log("chay vao todo validation:\n");
-  console.log("req.validatedQuery:", req.validatedQuery);
 
   next();
 };

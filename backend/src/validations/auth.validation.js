@@ -17,7 +17,8 @@ const registerSchema = z.object({
     .trim()
     .max(100, 'Họ tên không được vượt quá 100 ký tự')
     .optional()
-    .nullable(),
+    .nullable()
+    .transform((value) => value || null), // '', undefined, null → đều lưu là null
 
   email: z
     .string()
@@ -30,7 +31,10 @@ const registerSchema = z.object({
   password: z
     .string()
     .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
-    .max(72, 'Mật khẩu không được vượt quá 72 ký tự'),
+    .max(72, 'Mật khẩu không được vượt quá 72 ký tự')
+    .refine((value) => Buffer.byteLength(value, 'utf8') <= 72,
+      'Mật khẩu quá dài, vui lòng rút ngắn (chữ có dấu chiếm nhiều dung lượng hơn)'
+    ), // bcrypt chỉ dùng 72 BYTE đầu, chữ có dấu chiếm 2–3 byte
 });
 
 const loginSchema = z.object({
@@ -48,8 +52,6 @@ const loginSchema = z.object({
 module.exports.registerPost = (req, res, next) => {
   const result = registerSchema.safeParse(req.body);
 
-  console.log(result);
-
   if (!result.success) {
     res.status(400).json({
       error: {
@@ -57,7 +59,6 @@ module.exports.registerPost = (req, res, next) => {
         message: result.error.issues[0].message,
       },
     });
-    console.log("Loi:", res);
     return res;
   }
 

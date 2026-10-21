@@ -25,8 +25,6 @@ module.exports.createPost = async (userId, { title, description, dueDate }) => {
 
   return todo;
 
-
-  return todo;
 };
 
 module.exports.getTodos = async (userId, { page, limit, keyword, filterTab }) => {

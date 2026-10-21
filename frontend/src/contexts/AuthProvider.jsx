@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-    // Có API nào trả 401 (errorHandler phát sự kiện) → đăng xuất phía client và về trang đăng nhập
+  // Có API nào trả 401 (errorHandler phát sự kiện) → đăng xuất phía client và về trang đăng nhập
   useEffect(() => {
     const handleUnauthorized = () => {
       setUser(null);
