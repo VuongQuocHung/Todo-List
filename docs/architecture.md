@@ -1,137 +1,110 @@
-# Kiến trúc Todo App
+# Todo App — Kiến trúc hiện tại
 
-Cập nhật 15/10/2026. Tiến độ/task xem [timeline.md](timeline.md), contract xem [api.md](api.md). “Có code” chưa có nghĩa đã được nghiệm thu.
+Cập nhật working tree ngày **21/10/2026**. Mô tả source, chưa xác nhận runtime. Xem [báo cáo](TodoApp.md), [API](api.md) và [sequence](sequence-diagrams.md).
 
-Kịch bản theo mẫu phân tích thiết kế và sequence diagram của từng use case: [sequence-diagrams.md](sequence-diagrams.md). Cập nhật luồng ở file đó khi implementation thay đổi.
+## 1. Tổng thể
 
-## Backend
+Browser chạy React/SWR → Nginx :8080 → /api tới Express :3000 → MySQL/Redis. Frontend container phục vụ file build; browser không truy cập DB/Redis. Nginx có SPA fallback; Vite development proxy /api tới localhost:3000.
 
-Backend Express sử dụng 3-layer architecture và tổ chức thư mục theo layer.
+Backend chia theo layer; đây không phải microservices.
 
-Backend dùng CommonJS với `require` và `module.exports`. Frontend Vite dùng ES Modules theo cấu hình mặc định của Vite.
+## 2. Backend
 
 ```text
-src/
-├── routes/
-├── controllers/
-├── services/
-├── repositories/
-├── validations/
-├── middlewares/
-├── configs/
-├── cache/          # Dự kiến khi làm Redis, hiện chưa có
-├── app.js
-└── server.js
+backend/src/
+├── app.js                 # Express, routes, health, error middleware
+├── server.js              # dotenv, kết nối Redis, listen
+├── routes/                # auth và todo
+├── validations/           # Zod và kiểm tra ID
+├── middlewares/           # auth, 404, error
+├── controllers/           # HTTP input/output
+├── services/              # nghiệp vụ, phối hợp cache
+├── repositories/          # SQL qua mysql2/promise
+├── configs/               # MySQL pool, Redis client
+└── caches/
+    ├── cache.js           # withCache và thao tác Redis
+    └── todo.cache.js      # key và invalidation
 ```
 
-### Các layer
+Backend dùng CommonJS. Request Todo: route → requireAuth → validation → controller → service → repository/DB. Service bọc các hàm đọc bằng cache và invalidation sau ghi.
 
-1. Presentation layer
-   - `routes`: khai báo URL, HTTP method và chuỗi middleware/controller.
-   - `controllers`: đọc dữ liệu HTTP, gọi service và trả HTTP response.
-   - `validations`: kiểm tra body, params và query trước controller.
-   - `middlewares`: xử lý chung như authentication, 404 và error handling.
+Controller không viết SQL; repository không dùng req/res; service không tạo HTTP response. Error middleware nhận lỗi qua next(error).
 
-2. Business layer
-   - `services`: chứa nghiệp vụ như đăng ký, đăng nhập, kiểm tra quyền sở hữu todo và phối hợp cache.
-   - Service không sử dụng trực tiếp `req` hoặc `res`.
+Pool có connectionLimit=10. Truy vấn dùng placeholder qua execute; SELECT danh sách dùng pool.query có tham số cho LIMIT/OFFSET. Filter SQL chọn từ map cố định sau validation enum. Danh sách chạy bốn COUNT và một SELECT. Index (user_id, created_at, id) đã có; chưa có EXPLAIN/benchmark trong báo cáo.
 
-3. Data access layer
-   - `repositories`: chứa SQL tham số hóa và thao tác MySQL.
-   - Repository không quyết định HTTP status và không phụ thuộc controller/service.
-
-Các phần `configs` và `cache` là hạ tầng dùng chung, hỗ trợ các layer.
-
-### Luồng request
+## 3. Frontend
 
 ```text
-Request
-  → Route
-  → Validation / Authentication middleware
-  → Controller
-  → Service
-  → Repository
-  → MySQL
-```
-
-Khi trả kết quả, dữ liệu đi theo chiều ngược lại. Lỗi được chuyển tới error middleware để tạo response thống nhất.
-
-### Quy tắc phụ thuộc
-
-```text
-Controller → Service → Repository → MySQL
-```
-
-- Controller không viết SQL.
-- Repository không sử dụng `req` hoặc `res`.
-- Service không tự tạo HTTP response.
-- Route không chứa nghiệp vụ.
-- Frontend React là phần giao diện riêng và gọi backend qua REST API.
-
-### Ví dụ đăng ký
-
-```text
-POST /api/auth/register
-  → auth.route.js
-  → auth.validation.js
-  → auth.controller.js
-  → auth.service.js
-  → user.repository.js
-  → users table
-```
-
-## Frontend
-
-Frontend React + Vite là SPA, dùng React Router. Hiện tổ chức theo page, component dùng chung và Context. Cấu trúc thực tế:
-
-```text
-src/
-├── pages/
-│   ├── HomePage.jsx
-│   ├── RegisterPage.jsx
-│   ├── LoginPage.jsx
-│   └── TodoApp.jsx
+frontend/src/
+├── main.jsx               # Router, SWRConfig, AuthProvider
+├── App.jsx                # routes, Header, Toaster
+├── pages/                 # Home, Register, Login, TodoApp
 ├── components/
-│   └── layout/
-│       └── Header.jsx
-├── contexts/
-│   ├── AuthContext.js
-│   └── AuthProvider.jsx
-├── App.jsx
-└── main.jsx
+│   ├── layout/Header.jsx
+│   └── todo/              # form, card, list, search, filter, paging, trạng thái
+├── hooks/
+│   ├── useTodoQuery.js    # URL q/tab/page
+│   ├── useTodos.js        # SWR list và page overflow
+│   └── useTodoMutations.js # mutation và revalidation
+├── api/                   # httpClient, todoApi
+├── contexts/              # AuthContext, AuthProvider
+├── lib/errorHandler.js
+└── utils/todoDate.js
 ```
 
-- `pages`: ghép component thành màn hình.
-- `components`: component dùng chung.
-- `contexts`: chia sẻ thông tin user và các thao tác login/logout.
-- Chưa có thư mục features/lib, custom hook useAuth hoặc ProtectedRoute trong source hiện tại. Tách API client khi có lặp code thực tế.
+Frontend dùng ES Modules và CSS thuần. TodoApp ghép component, giữ state mở form/đang sửa. Form tạo/sửa và ô search tự giữ state nhập liệu. TodoItem dùng memo với 8 props; các callback liên quan dùng useCallback.
 
-## Authentication hiện tại
+- SWR key: ['todos', { keyword, page, limit, filterTab }].
+- URL q/tab/page giữ lựa chọn khi F5 và Back/Forward.
+- Mutation gọi mutate lọc các key Todo để revalidate; chưa có optimistic update.
+- useTodos điều chỉnh trang vượt giới hạn qua onPageOverflow.
+- keepPreviousData bật, nhưng TodoList ưu tiên skeleton khi isLoading; cần kiểm thử đổi key.
+- SWR key chưa có userId; AuthProvider xóa cache khi logout/401, cần kiểm thử đổi tài khoản.
 
-```text
-LoginPage → POST /auth/login → service so sánh bcrypt → JWT
-          ← Set-Cookie token + JSON user
-LoginPage → login(data.data) trong Context → Header render username
+httpClient bọc fetch, credentials, JSON, 204 và ApiError; timeout mặc định 10 giây bằng AbortSignal.timeout, kết hợp signal ngoài bằng AbortSignal.any. Abort chủ động giữ nguyên; timeout/mạng/HTTP lỗi được chuẩn hóa.
 
-Refresh → AuthProvider GET /auth/me kèm cookie
-        → requireAuth xác minh JWT → controller/service → findUserById
-        ← JSON user → Context → Header
+SWRConfig xử lý lỗi tải qua handleError silent và banner; không retry 4xx/abort, lỗi còn lại có retry giới hạn. Login/Register vẫn fetch trực tiếp và toast riêng.
 
-Header logout → POST /auth/logout → clearCookie → 204
-              → frontend setUser(null)
+## 4. Xác thực và quyền
+
+JWT trong HttpOnly cookie hạn một ngày. AuthProvider gọi /me khi mount, AbortController hủy khi cleanup. /me không refresh token; logout không thu hồi bản JWT đã sao chép.
+
+Mọi route Todo dùng requireAuth, verify HS256. SQL chi tiết/sửa/xóa lọc id/user_id, cache key chứa userId. App.jsx chưa có ProtectedRoute; sự kiện 401 xóa user/cache và chuyển login sau phản hồi API.
+
+## 5. Cache
+
+withCache tách cơ chế Redis khỏi hàm lấy dữ liệu. Hàm đọc DB vẫn có I/O, không phải pure function.
+
+```mermaid
+flowchart TD
+    Q["GET đã auth/validate"] --> K["Tạo key theo user và query"]
+    K --> C{"Redis hit?"}
+    C -->|"Có"| R["Trả cache"]
+    C -->|"Không / cache không sẵn sàng"| D["Đọc DB theo user"]
+    D --> S["Cache kết quả hợp lệ nếu có thể"]
+    S --> O["Trả response"]
 ```
 
-- Cookie HttpOnly chứa JWT hạn 1 ngày; frontend không đọc token, Context chỉ giữ user.
-- Frontend dùng useEffect cleanup để bỏ qua kết quả effect cũ; chưa có tự refresh token hay tự kiểm tra phiên định kỳ.
-- Logout xóa cookie hiện tại, không thu hồi bản sao JWT còn hạn.
-- /todos hiện chưa được chặn bởi ProtectedRoute. Đó là task A03; auth middleware backend vẫn bắt buộc cho API Todo.
-- Code auth đã có nhưng còn chờ kiểm tra browser flow và request lỗi. Các thay đổi được người thực hiện tự gõ lại nên cần chạy nghiệm thu, không dựa vào kết quả build của phiên trước.
+| Loại | Key |
+| --- | --- |
+| Chi tiết | todo:{userId}:{todoId} |
+| Version | todos:ver:{userId} |
+| Danh sách | todos:{userId}:v{version}:{queryHash} |
 
-## Todo và hạ tầng dự kiến
+Hash là 16 ký tự hex đầu của SHA-1 trên [page, limit, keyword, filterTab]. Key dữ liệu có TTL mặc định 60 giây; version chưa có TTL. Không cache null/undefined.
 
-- UI Todo hiện dùng content/status với dữ liệu mẫu; database dùng title/description/completed. Chốt hai trạng thái và đổi UI trước khi nối API.
-- API Todo sẽ dùng cùng 3-layer và gắn chủ sở hữu từ req.auth.userId; repository lọc id + user_id.
-- Paging dùng LIMIT/OFFSET, sort created_at + id; kiểm tra bằng EXPLAIN với dữ liệu thử.
-- Redis dự kiến cache chi tiết theo userId/todoId, TTL 60s; xóa cache sau ghi và fallback DB khi Redis lỗi.
-- Docker dự kiến bốn service frontend/backend/MySQL/Redis, Nginx proxy /api và fallback index.html.
-- Cache, Docker và API Todo chưa tồn tại trong source ngày cập nhật này; xem deadline triển khai ở timeline.
+Tạo tăng version; sửa/xóa DEL chi tiết rồi tăng version. Key danh sách cũ tự hết TTL. DB ghi trước invalidation; lỗi cache không rollback DB, nên có thể còn dữ liệu cũ khi invalidation lỗi hoặc đọc/ghi đồng thời.
+
+Redis client disableOfflineQueue, connectTimeout và reconnectStrategy. server.js không await connect Redis; Compose vẫn chờ Redis healthy trước khi start backend. Fallback runtime và điều kiện khởi động Compose là hai hành vi khác nhau.
+
+## 6. Dữ liệu và triển khai
+
+Migration 001_init.sql có users/todos/tags/todo_tags; tag chưa có API/UI. DATE nghiệp vụ dùng giờ Việt Nam, DATETIME và timezone connection cần thống nhất thêm.
+
+Compose chính publish 8080; dev override publish MySQL 3307 và bật backend development. MySQL dùng volume, SQL init chỉ chạy khi data directory trống. SQL ghi cứng todo_app.
+
+Backend chạy user node; frontend multi-stage build và Nginx. Health backend chỉ SELECT 1. Nginx hiện HTTP; production bật Secure cookie, cần kiểm thử cách truy cập demo và cấu hình HTTPS khi triển khai.
+
+## 7. Còn cần hoàn thiện
+
+Test API/browser/cache/môi trường sạch; ProtectedRoute và chờ auth; phân vùng SWR theo user; kiểm chứng loading; thống nhất client cho auth, timezone và dọn debug log. Chưa có refresh token, token revocation, tag API/UI, admin hoặc chia sẻ.

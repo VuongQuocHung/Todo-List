@@ -1,294 +1,298 @@
-# Kịch bản use case và biểu đồ tuần tự Todo App
+# Todo App — Use case và sequence diagram
 
-Cập nhật: **15/10/2026**. Cách trình bày tham khảo mẫu báo cáo phân tích thiết kế người thực hiện cung cấp: Use case, Actor, Tiên điều kiện, Hậu điều kiện, Kịch bản chính và Ngoại lệ; mỗi kịch bản có biểu đồ tuần tự ngay bên dưới.
+Cập nhật **21/10/2026**, mô tả implementation hiện tại theo source. Diagram không phải bằng chứng đã chạy thành công. [API](api.md) là nơi ghi validation/status chi tiết; [timeline](timeline.md) ghi kết quả nghiệm thu khi có.
 
-Mẫu báo cáo có bảng kịch bản nghiệp vụ; biểu đồ tuần tự dưới đây được bổ sung cho Todo App bằng Mermaid. Các tên tham gia bám theo React SPA và Express 3-layer, không tạo thêm lớp chỉ để giống tên trong báo cáo môn học.
+Các bước route/proxy có thể được lược để sơ đồ dễ đọc. Cache hit có thể bỏ qua repository; quyền truy cập vẫn dựa trên middleware và key theo user.
 
-**Trạng thái:** bốn luồng auth bên dưới đã có code, chờ kiểm tra end-to-end theo [timeline](timeline.md). Diagram mô tả luồng ở mức thiết kế/đọc source, không phải bằng chứng tính năng đã được nghiệm thu. HTTP status và JSON chi tiết xem [api.md](api.md).
-
-## Mục lục
-
-1. [UC01 — Đăng ký tài khoản](#uc01--đăng-ký-tài-khoản)
-2. [UC02 — Đăng nhập và cập nhật Header](#uc02--đăng-nhập-và-cập-nhật-header)
-3. [UC03 — Khôi phục trạng thái đăng nhập khi mở hoặc refresh trang](#uc03--khôi-phục-trạng-thái-đăng-nhập-khi-mở-hoặc-refresh-trang)
-4. [UC04 — Đăng xuất](#uc04--đăng-xuất)
-5. [Các use case Todo cần bổ sung](#các-use-case-todo-cần-bổ-sung)
-
-## Quy ước đối tượng tham gia
-
-| Đối tượng | Vai trò | Liên hệ source |
-|---|---|---|
-| Người dùng | Actor thao tác trên trình duyệt | Không phải component |
-| Browser | Quản lý cookie, gửi request và nhận response | Cookie token HttpOnly |
-| RegisterPage/LoginPage/Header | Giao diện tương tác | frontend/src/pages và components/layout |
-| AuthProvider | State user và thao tác login/logout dùng chung | frontend/src/contexts/AuthProvider.jsx |
-| AuthValidation | Kiểm tra body ở backend | backend/src/validations/auth.validation.js |
-| AuthMiddleware | Xác minh JWT cookie | backend/src/middlewares/auth.middleware.js |
-| AuthController | Xử lý HTTP và trả response | backend/src/controllers/auth.controller.js |
-| AuthService | Nghiệp vụ tài khoản, bcrypt và tạo token | backend/src/services/auth.service.js |
-| UserRepository | Truy vấn SQL qua MySQL pool | backend/src/repositories/user.repository.js |
-| ErrorHandler | Chuyển lỗi thành response HTTP/JSON | backend/src/middlewares/error.middleware.js |
-| MySQL | Lưu users và todos | Migration 001/002 |
-
-`auth.route.js` nối request tới validation/middleware/controller. Vite proxy chuyển `/api` tới backend khi development. Hai phần chuyển tiếp này được lược khỏi lifeline để tập trung vào các lời gọi xử lý; chúng vẫn nằm trong luồng thực thi.
-
-## UC01 — Đăng ký tài khoản
-
-*Bảng 1. Kịch bản đăng ký tài khoản*
+## UC01 — Đăng ký
 
 | Thuộc tính | Nội dung |
-|---|---|
-| Use case | Đăng ký tài khoản |
-| Actor | Người dùng chưa có tài khoản |
-| Tiên điều kiện | Người dùng mở `/register`; frontend/backend hoạt động, MySQL có schema phù hợp |
-| Hậu điều kiện thành công | Có bản ghi user mới với username/email duy nhất; mật khẩu được hash; fullname có thể NULL; người dùng được thông báo thành công. Đăng ký hiện không tự đăng nhập hoặc tự chuyển trang |
-| Kịch bản chính | 1. Người dùng nhập username, email, password, xác nhận password; fullname tùy chọn.<br>2. Người dùng bấm Đăng ký.<br>3. Frontend kiểm tra dữ liệu, chặn gửi lặp và gửi request không chứa confirmPassword.<br>4. Backend kiểm tra schema, chuẩn hóa dữ liệu theo code hiện tại và kiểm tra username/email trùng.<br>5. Backend hash mật khẩu và lưu user.<br>6. Backend lấy lại user an toàn và trả 201.<br>7. Frontend hiện toast thành công, xóa dữ liệu form và lỗi cũ |
-| Ngoại lệ | 3a. Frontend phát hiện lỗi: hiển thị lỗi, không gọi API.<br>4a. Backend validation sai: trả 400, không gọi service.<br>4b. Username/email đã tồn tại: trả 409 với mã lỗi tương ứng.<br>5a. Hai request trùng nhau: unique constraint chặn một request, service đổi ER_DUP_ENTRY thành lỗi 409.<br>5b. Lỗi DB hoặc code: error handler trả 500; cần kiểm tra DB nếu lỗi xảy ra sau INSERT vì luồng hiện chưa có transaction toàn bộ createUser.<br>6a. Mất kết nối/response không hợp lệ: frontend báo lỗi, không khẳng định tài khoản chưa được tạo |
-| Task liên quan | A01, A04 |
-
-*Hình 1. Biểu đồ tuần tự đăng ký tài khoản — luồng thành công và validation backend sai*
+| --- | --- |
+| Actor | Người chưa có tài khoản |
+| Tiền điều kiện | Mở /register, backend và DB sẵn sàng |
+| Đầu vào | username, email, password; fullname tùy chọn; confirmPassword chỉ dùng UI |
+| Thành công | User mới lưu hash, response 201; UI xóa form và thông báo, không tự login |
+| Ngoại lệ | Frontend chặn dữ liệu sai; backend 400; trùng username/email 409; lỗi hệ thống 500 |
 
 ```mermaid
 sequenceDiagram
-    autonumber
     actor U as Người dùng
-    participant P as RegisterPage
+    participant F as RegisterPage
     participant V as AuthValidation
-    participant C as AuthController
-    participant S as AuthService
-    participant R as UserRepository
-    participant D as MySQL
-
-    U->>P: Nhập thông tin và bấm Đăng ký
-    P->>P: validateForm()
-    alt Frontend phát hiện lỗi
-        P-->>U: Hiển thị lỗi và dừng submit
-    else Frontend hợp lệ
-        P->>V: POST /api/auth/register
-        V->>V: registerSchema.safeParse(req.body)
-        alt Backend validation sai
-            V-->>P: 400 VALIDATION_ERROR
-            P-->>U: Toast lỗi
-        else Backend validation hợp lệ, tài khoản chưa tồn tại
-            V->>C: next()
-            C->>S: registerUser(req.body)
-            S->>R: findUserByUsername(username)
-            R->>D: SELECT theo username
-            D-->>R: Không có bản ghi
-            R-->>S: null
-            S->>R: findUserByEmail(email)
-            R->>D: SELECT theo email
-            D-->>R: Không có bản ghi
-            R-->>S: null
-            S->>S: bcrypt.genSalt() và bcrypt.hash()
-            S->>R: createUser(username, fullname, email, hash)
-            R->>D: INSERT INTO users
-            D-->>R: insertId
-            R->>D: SELECT user theo insertId
-            D-->>R: User không chứa password_hash
-            R-->>S: user
-            S-->>C: user
-            C-->>P: 201, data user
-            P->>P: Xóa form và lỗi
-            P-->>U: Toast đăng ký thành công
-        end
-    end
+    participant S as Controller / AuthService
+    participant D as UserRepository / MySQL
+    U->>F: Nhập thông tin và submit
+    F->>F: validateForm, khóa submit
+    F->>V: POST /api/auth/register
+    V->>V: Zod chuẩn hóa và kiểm tra
+    V->>S: Body hợp lệ
+    S->>D: Kiểm tra username/email trùng
+    S->>S: bcrypt salt 10 và hash
+    S->>D: INSERT rồi SELECT user an toàn
+    D-->>S: User không chứa hash
+    S-->>F: 201 data user
+    F-->>U: Xóa form, toast thành công
 ```
 
-Nhánh username/email trùng dùng chung luồng lỗi: service ném lỗi → controller `next(error)` → ErrorHandler trả 409. Không trả password/hash cho frontend.
+Unique constraint chặn request trùng đồng thời; service chuyển ER_DUP_ENTRY thành 409. INSERT và SELECT chưa được bọc chung transaction; lỗi sau INSERT không đồng nghĩa DB chưa tạo user.
 
-## UC02 — Đăng nhập và cập nhật Header
-
-*Bảng 2. Kịch bản đăng nhập*
+## UC02 — Đăng nhập
 
 | Thuộc tính | Nội dung |
-|---|---|
-| Use case | Đăng nhập và hiển thị tài khoản trên Header |
-| Actor | Người dùng đã có tài khoản |
-| Tiên điều kiện | Người dùng mở `/login`; phiên kiểm tra ban đầu đã kết thúc; backend có JWT_SECRET và user có password hash hợp lệ |
-| Hậu điều kiện thành công | Browser lưu JWT trong cookie token; Context giữ thông tin user; Header hiện username/avatar và nút đăng xuất; route đổi sang `/todos` bằng SPA |
-| Kịch bản chính | 1. Người dùng nhập email/password và bấm Đăng nhập.<br>2. Frontend kiểm tra dữ liệu và gửi POST login.<br>3. Backend validation, tìm user và so sánh password bằng bcrypt.compare.<br>4. Backend tạo JWT hạn 1 ngày, trả Set-Cookie và JSON user.<br>5. Browser xử lý cookie, frontend nhận user.<br>6. LoginPage gọi login(data.data), Provider cập nhật user và chia sẻ Context mới.<br>7. Header render username/avatar; React Router chuyển `/todos` không tải lại toàn trang |
-| Ngoại lệ | 2a. Frontend sai: dừng trước fetch.<br>3a. Backend validation sai: 400.<br>3b. Email không tồn tại hoặc mật khẩu sai: cùng lỗi 401 INVALID_CREDENTIALS, không cấp cookie đăng nhập.<br>4a. Lỗi ký token/cấu hình/DB: 500.<br>5a. Request hoặc đọc response lỗi: báo thất bại, không cập nhật Context như đã login |
-| Task liên quan | A02 |
-
-*Hình 2. Biểu đồ tuần tự đăng nhập và cập nhật Header*
+| --- | --- |
+| Actor | Người có tài khoản |
+| Tiền điều kiện | Trang login; frontend hoàn tất kiểm tra phiên ban đầu |
+| Thành công | Cookie JWT một ngày, Context user, Header cập nhật, navigate /todos |
+| Ngoại lệ | Validation 400; email/password sai 401 INVALID_CREDENTIALS; lỗi hệ thống |
 
 ```mermaid
 sequenceDiagram
-    autonumber
     actor U as Người dùng
-    participant P as LoginPage
+    participant F as LoginPage
     participant B as Browser
-    participant V as AuthValidation
-    participant C as AuthController
-    participant S as AuthService
-    participant R as UserRepository
-    participant D as MySQL
-    participant E as ErrorHandler
-    participant A as AuthProvider
-    participant H as Header
-
-    U->>P: Nhập email/password và submit hợp lệ
-    P->>B: fetch POST /api/auth/login
-    B->>V: Gửi JSON request
-    V->>C: Body hợp lệ, next()
-    C->>S: loginUser(req.body)
-    S->>R: findUserForLogin(email)
-    R->>D: SELECT user và password_hash
-    D-->>R: User hoặc không có bản ghi
-    R-->>S: user hoặc null
-    S->>S: Nếu có user, bcrypt.compare(password, hash)
-    alt Email không tồn tại hoặc mật khẩu sai
-        S-->>C: Ném INVALID_CREDENTIALS
-        C->>E: next(error)
-        E-->>B: 401 và JSON error
-        B-->>P: Response lỗi
-        P-->>U: Toast lỗi, giữ form
-    else Thông tin đúng
-        S->>S: jwt.sign() tạo token
-        S-->>C: token và user an toàn
-        C-->>B: 200, Set-Cookie token và JSON user
-        B->>B: Xử lý cookie HttpOnly theo chính sách browser
-        B-->>P: Response, đọc JSON
-        P->>A: login(data.data)
-        A->>A: setUser(user)
-        A-->>H: Context user thay đổi
-        H->>H: Render username và avatar
-        P->>P: toast.success và navigate('/todos')
-        P-->>U: Hiển thị trang công việc
-    end
+    participant A as AuthController / Service
+    participant D as UserRepository / MySQL
+    participant C as AuthProvider / Header
+    U->>F: Submit email/password hợp lệ
+    F->>B: fetch POST /api/auth/login
+    B->>A: Request qua validation
+    A->>D: Tìm user theo email chuẩn hóa
+    D-->>A: User và passwordHash
+    A->>A: bcrypt.compare, ký JWT
+    A-->>B: 200 data user, Set-Cookie token
+    B-->>F: JSON user
+    F->>C: login(user), setUser
+    C->>C: Header đọc Context mới
+    F->>F: navigate /todos
 ```
 
-Thứ tự commit giao diện do React lên lịch, không bảo đảm Header đã vẽ xong trước khi navigate chạy. Điều quan trọng là cả Header và route mới đọc cùng Context; không có reload hoặc request /me bắt buộc ngay sau login.
+Cookie HttpOnly, SameSite=Lax, Secure khi production. Frontend không đọc JWT. LoginPage hiện dùng fetch trực tiếp, không qua httpClient chung.
 
-## UC03 — Khôi phục trạng thái đăng nhập khi mở hoặc refresh trang
-
-*Bảng 3. Kịch bản khôi phục trạng thái tài khoản*
+## UC03 — Khôi phục user khi mở/F5
 
 | Thuộc tính | Nội dung |
-|---|---|
-| Use case | Nhận diện lại user từ cookie và hiển thị Header |
-| Actor | Người dùng mở hoặc refresh ứng dụng; hệ thống tự kiểm tra |
-| Tiên điều kiện | AuthProvider bọc App; Browser có thể có hoặc không có cookie token |
-| Hậu điều kiện thành công | Với cookie hợp lệ và tài khoản còn tồn tại, Context nhận user từ backend và Header hiện tài khoản |
-| Kịch bản chính | 1. Người dùng mở trang hoặc nhấn F5.<br>2. AuthProvider khởi tạo user=null, isAuthLoading=true; Header hiện Đang tải.<br>3. Sau commit ban đầu, effect gọi GET /me kèm cookie.<br>4. Backend xác minh token, gắn req.auth.userId.<br>5. Controller/service/repository tìm user theo ID.<br>6. Backend trả 200 với user, Cache-Control: no-store.<br>7. Provider đặt user=data.data và kết thúc loading; Header cập nhật |
-| Ngoại lệ | 4a. Không có token, token sai/hết hạn: trả 401; frontend user=null, Header hiện Đăng nhập/Đăng ký.<br>5a. User đã bị xóa: 401.<br>5b. DB/server lỗi: 500; code frontend hiện cũng đặt user=null, chưa phân biệt lỗi hệ thống với hết phiên trên giao diện.<br>3a. Effect được cleanup trước khi request trả về: ignore=true, bỏ qua cập nhật state từ effect đó. Request HTTP không tự bị hủy |
-| Task liên quan | A02; A03 cho việc bảo vệ route Todo |
-
-*Hình 3. Biểu đồ tuần tự kiểm tra phiên khi refresh*
+| --- | --- |
+| Actor | Hệ thống khi ứng dụng mount |
+| Tiền điều kiện | AuthProvider nằm trong Router/SWRConfig |
+| Thành công | User từ /me được đưa vào Context |
+| Ngoại lệ | Token thiếu/sai/hết hạn hoặc user mất: 401; mạng/DB lỗi hiện cũng dẫn tới user=null |
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor U as Người dùng
-    participant B as Browser
-    participant A as AuthProvider
-    participant H as Header
-    participant M as AuthMiddleware
-    participant C as AuthController
-    participant S as AuthService
-    participant R as UserRepository
-    participant D as MySQL
-    participant E as ErrorHandler
-
-    U->>B: Mở trang hoặc F5
-    B->>A: React mount ứng dụng
-    A->>A: user=null, isAuthLoading=true
-    A-->>H: Context ban đầu
-    H->>H: Hiển thị Đang tải
-    A->>B: Effect fetch GET /api/auth/me
-    B->>M: Request kèm cookie nếu có
-    M->>M: Đọc token, jwt.verify()
-    alt Không có token hoặc token không hợp lệ
-        M->>E: next(UNAUTHORIZED)
-        E-->>B: 401 và JSON error
-        B-->>A: Response không thành công
-        A->>A: Nếu effect còn hiệu lực, setUser(null)
-    else Token hợp lệ và tài khoản tồn tại
-        M->>M: Gắn req.auth.userId
-        M->>C: next()
-        C->>S: getCurrentUser(userId)
-        S->>R: findUserById(userId)
-        R->>D: SELECT user theo id
-        D-->>R: User an toàn
-        R-->>S: user
-        S-->>C: user
-        C-->>B: 200, JSON user, no-store
-        B-->>A: Response thành công
-        A->>A: Nếu effect còn hiệu lực, setUser(data.data)
-    end
-    A->>A: Nếu effect còn hiệu lực, setIsAuthLoading(false)
-    A-->>H: Context cập nhật
-    H->>H: Hiện tài khoản hoặc Đăng nhập/Đăng ký
+    participant F as AuthProvider
+    participant H as httpClient / Browser
+    participant M as requireAuth
+    participant A as AuthController / Service
+    participant D as UserRepository / MySQL
+    F->>F: user=null, isAuthLoading=true
+    F->>H: GET /api/auth/me với AbortController
+    H->>M: Cookie token
+    M->>M: verify HS256, gắn userId
+    M->>A: next
+    A->>D: findUserById
+    D-->>A: User an toàn
+    A-->>H: 200 data, Cache-Control no-store
+    H-->>F: Kết quả
+    F->>F: Nếu chưa abort: setUser, kết thúc loading
+    Note over F,H: Cleanup gọi abort; không cập nhật state từ request đã hủy
 ```
 
-Tài khoản không còn tồn tại và lỗi DB dùng luồng controller → ErrorHandler tương tự UC02. /me là kiểm tra phiên hiện tại, không phải API refresh token; project chưa có refresh token.
+/me không refresh token. /todos chưa có route guard chờ auth; hook tải Todo hiện có thể chạy cùng lúc với /me.
 
 ## UC04 — Đăng xuất
 
-*Bảng 4. Kịch bản đăng xuất*
-
 | Thuộc tính | Nội dung |
-|---|---|
-| Use case | Đăng xuất tài khoản hiện tại |
-| Actor | Người dùng đang có thông tin tài khoản hiển thị trên Header |
-| Tiên điều kiện | Header có nút Đăng xuất; frontend/backend hoạt động |
-| Hậu điều kiện thành công | Browser xóa cookie token theo response; Context user=null; Header hiện Đăng nhập/Đăng ký; giao diện chuyển trang chủ |
-| Kịch bản chính | 1. Người dùng bấm Đăng xuất.<br>2. Header khóa nút, gọi logout() từ Context.<br>3. Provider gửi POST /logout kèm cookie.<br>4. Controller clearCookie với các thuộc tính phù hợp và trả 204 không có body.<br>5. Browser xử lý xóa cookie; Provider kiểm tra response.ok và đặt user=null.<br>6. Header hiện trạng thái chưa đăng nhập, toast thành công và navigate('/').<br>7. Nút kết thúc trạng thái chờ |
-| Ngoại lệ | 3a. Mất mạng hoặc server trả lỗi: frontend báo lỗi và chưa tự xóa user khỏi Context.<br>4a. Cookie đã hết hạn/không tồn tại: endpoint vẫn cho phép xóa cookie và trả 204.<br>5a. Không gọi response.json() vì 204 không có body.<br>Giới hạn: bản JWT đã được sao chép trước logout còn hiệu lực đến khi hết hạn; chưa có thu hồi token server-side |
-| Task liên quan | A02 |
-
-*Hình 4. Biểu đồ tuần tự đăng xuất*
+| --- | --- |
+| Actor | Người dùng có nút logout trên Header |
+| Thành công | Backend xóa cookie, 204; frontend xóa user/cache, về trang chủ |
+| Ngoại lệ | Request lỗi: chưa thực hiện nhánh thành công; 401 qua handler có thể xử lý phiên riêng |
 
 ```mermaid
 sequenceDiagram
-    autonumber
     actor U as Người dùng
     participant H as Header
     participant A as AuthProvider
-    participant B as Browser
+    participant B as httpClient / Browser
     participant C as AuthController
-
-    U->>H: Bấm Đăng xuất
-    H->>H: isLoggingOut=true
+    U->>H: Logout
     H->>A: logout()
-    A->>B: fetch POST /api/auth/logout
-    B->>C: HTTP request
-    alt Request được xử lý thành công
-        C->>C: res.clearCookie('token')
-        C-->>B: 204 và Set-Cookie hết hạn
-        B->>B: Xử lý xóa cookie
-        B-->>A: Response 204
-        A->>A: setUser(null), không parse JSON
-        A-->>H: Context user=null, logout hoàn thành
-        H->>H: Hiện Đăng nhập/Đăng ký
-        H->>H: Toast thành công và navigate('/')
-    else Lỗi mạng hoặc HTTP lỗi
-        B-->>A: Request reject hoặc response không thành công
-        A-->>H: Ném lỗi, chưa cập nhật user
-        H-->>U: Toast lỗi đăng xuất
-    end
-    H->>H: isLoggingOut=false
+    A->>B: POST /api/auth/logout
+    B->>C: Request
+    C-->>B: Clear-Cookie, 204
+    B-->>A: null, không parse JSON
+    A->>A: setUser(null), xóa SWR cache
+    A-->>H: Hoàn tất
+    H->>H: Toast và navigate /
 ```
 
-## Các use case Todo cần bổ sung
+Endpoint không bắt buộc token hợp lệ. Logout không thu hồi bản JWT đã sao chép; cache SWR được xóa nhưng Redis không bị xóa toàn bộ khi logout.
 
-Các mục sau là **thiết kế dự kiến, chưa có API trong source ngày 15/10**. Hoàn thành bảng kịch bản rồi cập nhật diagram cùng với từng luồng, theo format UC01–UC04.
+## UC05 — Tạo Todo
 
-| Mã | Use case | Actor | Điều kiện chính và ngoại lệ cần mô tả | Task |
-|---|---|---|---|---|
-| UC05 | Tạo công việc | User đã đăng nhập | title hợp lệ; user_id lấy từ JWT; 201; lỗi validation 400 hoặc auth 401 | T01–T05 |
-| UC06 | Xem danh sách, phân trang | User đã đăng nhập | Chỉ Todo của mình; page/pageSize; total; trang rỗng; response cũ khi đổi trang | T03–T05, P01–P04 |
-| UC07 | Xem chi tiết Todo có cache | User đã đăng nhập | requireAuth; key theo userId/todoId; hit/miss; TTL; 404; Redis lỗi fallback DB | T07, C01–C05 |
-| UC08 | Sửa hoặc hoàn thành Todo | Chủ sở hữu Todo | PATCH fields hợp lệ; id + user_id; invalidation sau ghi; 404 khi khác chủ | T06–T10, C03 |
-| UC09 | Xóa Todo | Chủ sở hữu Todo | Xác nhận xóa; 204; frontend không parse JSON; xóa cache; item cuối trang | T08–T10, P03, C03 |
+| Thuộc tính | Nội dung |
+| --- | --- |
+| Actor | User đã xác thực |
+| Đầu vào | title, description/dueDate tùy chọn |
+| Thành công | 201, Todo thuộc user; completed=false; version danh sách tăng |
+| Ngoại lệ | 400 body sai/field lạ; 401; lỗi DB hoặc mạng |
 
-## Cách cập nhật
+```mermaid
+sequenceDiagram
+    actor U as Người dùng
+    participant F as Form / hook / todoApi
+    participant C as Auth + Validation / Controller
+    participant S as TodoService
+    participant D as Repository / MySQL
+    participant R as Redis
+    U->>F: Submit form hợp lệ
+    F->>C: POST /api/todos kèm cookie
+    C->>S: userId từ JWT, body đã validate
+    S->>D: Kiểm tra user tồn tại
+    S->>D: INSERT completed=false, SELECT lại
+    D-->>S: Todo mới
+    S->>R: INCR todos:ver:userId
+    S-->>C: Todo
+    C-->>F: 201 data
+    F->>F: Yêu cầu SWR revalidation, page=1
+    F-->>U: Đóng/xóa form, toast
+```
 
-1. Sửa bảng kịch bản trước: đầu vào, hành động, hậu điều kiện và ngoại lệ.
-2. Đối chiếu contract với api.md, tên hàm với source, deadline với timeline.md.
-3. Sửa Mermaid ngay dưới use case, giữ message thể hiện ai gọi ai và dữ liệu nào được trả lại.
-4. Ghi rõ diagram mô tả code hiện có hay thiết kế dự kiến. Sau khi chạy thử mới thêm bằng chứng nghiệm thu vào timeline.
-5. Không ghi password, JWT, secret hoặc thông tin cá nhân thật vào ví dụ/ảnh chụp.
+Create giữ keyword/tab; item mới có thể không khớp bộ lọc. Hook create gọi revalidation nhưng không await nó. Chưa có idempotency key; mất phản hồi sau ghi DB không chứng minh chưa tạo dữ liệu.
 
-Đọc diagram bằng Markdown Preview có hỗ trợ Mermaid hoặc trên GitHub. Nếu trình xem không render Mermaid, khối mã vẫn là nguồn để sửa diagram; lỗi hiển thị ở trình xem không chứng minh luồng code sai.
+## UC06 — Danh sách, tìm kiếm, lọc, phân trang
+
+| Thuộc tính | Nội dung |
+| --- | --- |
+| Actor | User đã xác thực |
+| Đầu vào | page/limit/keyword/filterTab; UI q/tab/page nằm trên URL |
+| Thành công | 200 data + pagination + stats, chỉ dữ liệu của user |
+| Ngoại lệ | 400 query sai/field lạ; 401; lỗi hệ thống; trang vượt dữ liệu trả mảng rỗng |
+
+```mermaid
+sequenceDiagram
+    participant F as useTodoQuery / useTodos
+    participant C as Auth + Validation / Controller
+    participant S as Service / withCache
+    participant R as Redis
+    participant D as Repository / MySQL
+    F->>C: GET /api/todos, query và cookie
+    C->>S: userId, validatedQuery
+    S->>R: Đọc version và key theo queryHash
+    alt Cache hit
+        R-->>S: data, pagination, stats
+    else Miss hoặc Redis không sẵn sàng
+        S->>D: 4 COUNT theo tab, SELECT LIMIT/OFFSET
+        D-->>S: Todos, totals, stats
+        S->>R: Lưu response với TTL nếu có thể
+    end
+    S-->>C: Response danh sách
+    C-->>F: 200
+    F->>F: Nếu page vượt lastPage, cập nhật URL
+```
+
+SWR có thể phục vụ dữ liệu frontend mà chưa phát sinh request backend. keepPreviousData đã bật nhưng TodoList vẫn ưu tiên skeleton khi isLoading. Chưa xác nhận hành vi loading qua runtime.
+
+## UC07 — Đọc chi tiết có cache
+
+| Thuộc tính | Nội dung |
+| --- | --- |
+| Actor | Client đã xác thực gọi API; chưa có màn hình chi tiết riêng |
+| Thành công | 200 Todo của user; cache key phân tách theo user |
+| Ngoại lệ | ID sai 400; thiếu phiên 401; không có/khác chủ 404, không cache null |
+
+```mermaid
+sequenceDiagram
+    participant C as Client / Auth / Validation
+    participant S as TodoService / withCache
+    participant R as Redis
+    participant D as Repository / MySQL
+    C->>S: GET detail với userId và todoId
+    S->>R: GET todo:userId:todoId
+    alt Cache hit
+        R-->>S: Todo
+    else Miss hoặc cache lỗi
+        S->>D: SELECT WHERE id=? AND user_id=?
+        D-->>S: Todo hoặc null
+        opt Có Todo
+            S->>R: SETEX key, mặc định 60 giây
+        end
+    end
+    S-->>C: 200 data hoặc 404 TODO_NOT_FOUND
+```
+
+Cache không lưu password/hash. Middleware chạy trước cache; key userId lấy từ token đã verify.
+
+## UC08 — Sửa hoặc bật/tắt hoàn thành
+
+| Thuộc tính | Nội dung |
+| --- | --- |
+| Actor | Chủ sở hữu Todo |
+| Đầu vào | PATCH ít nhất một field hợp lệ |
+| Thành công | 200, DB cập nhật, DEL chi tiết, tăng version list, SWR revalidate |
+| Ngoại lệ | Body/ID sai 400; auth 401; không có/khác chủ 404; lỗi hệ thống |
+
+```mermaid
+sequenceDiagram
+    participant F as TodoItem / useTodoMutations
+    participant C as Auth + Validation / Controller
+    participant S as TodoService
+    participant D as Repository / MySQL
+    participant R as Redis
+    F->>F: Ref chặn trùng, set pending
+    F->>C: PATCH /api/todos/:id
+    C->>S: userId, todoId, updateData
+    S->>D: UPDATE theo id/user_id, SELECT lại
+    D-->>S: Todo hoặc null
+    opt Có Todo
+        S->>R: DEL detail
+        S->>R: INCR version danh sách
+    end
+    S-->>C: Todo hoặc lỗi 404
+    C-->>F: 200 data hoặc lỗi
+    F->>F: Khi thành công: revalidate, toast, đóng form phù hợp
+    F->>F: Bỏ pending sau xử lý
+```
+
+completed_date được cập nhật theo trạng thái cũ trước khi gán completed. Gửi true lần nữa không thay ngày hoàn thành. Chưa có optimistic update.
+
+## UC09 — Xóa Todo
+
+| Thuộc tính | Nội dung |
+| --- | --- |
+| Actor | Chủ sở hữu Todo |
+| Kích hoạt | Bấm Xóa và xác nhận window.confirm |
+| Thành công | DELETE theo id/user_id, 204; invalidation và SWR revalidation |
+| Ngoại lệ | Hủy xác nhận không gửi request; 400/401/404; lỗi DB/mạng |
+
+```mermaid
+sequenceDiagram
+    actor U as Người dùng
+    participant F as TodoApp / useTodoMutations
+    participant C as Auth + Validation / Controller
+    participant S as TodoService
+    participant D as Repository / MySQL
+    participant R as Redis
+    U->>F: Xác nhận xóa
+    F->>C: DELETE /api/todos/:id
+    C->>S: userId, todoId
+    S->>D: DELETE WHERE id=? AND user_id=?
+    D-->>S: affectedRows
+    alt Có bản ghi bị xóa
+        S->>R: DEL detail, INCR list version
+        S-->>C: Thành công
+        C-->>F: 204, không body
+        F->>F: SWR revalidate, toast, đóng form tương ứng
+    else affectedRows=0
+        S-->>C: TODO_NOT_FOUND
+        C-->>F: 404
+    end
+```
+
+Nếu trang trở thành vượt giới hạn, response danh sách sau đó kích hoạt onPageOverflow. Invalidation là sau ghi DB, lỗi Redis không rollback DB; cần ghi nhận giới hạn dữ liệu cũ.
+
+## Kiểm chứng và bảo trì
+
+- Các diagram mô tả luồng tuần tự chính; nhánh lỗi không vẽ hết được mô tả trong bảng/notes và API.
+- Không coi có diagram là đã test. Ghi bằng chứng vào timeline, nhất là ownership hai tài khoản, cache, lỗi mạng và request đồng thời.
+- Khi source đổi, cập nhật bảng use case và sơ đồ cùng API.
+- Ảnh PNG trong thư mục docs là tài liệu tham khảo trước đó; Mermaid trong file này là bản mô tả hiện tại. Không dùng ảnh cũ để suy ra trạng thái code.

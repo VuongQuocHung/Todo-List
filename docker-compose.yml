@@ -13,8 +13,6 @@ services:
       - mysql_data:/var/lib/mysql
       # Lần đầu khởi tạo (volume trống), MySQL tự chạy các file .sql trong thư mục này
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "3307:3306"
     healthcheck:
       # Kết nối qua TCP 127.0.0.1: lúc MySQL đang chạy migration ban đầu thì TCP chưa mở → chưa healthy
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]

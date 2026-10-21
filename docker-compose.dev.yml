@@ -1,0 +1,9 @@
+# Bổ sung cho lúc phát triển / debug — KHÔNG dùng khi chạy production
+services:
+  mysql:
+    ports:
+      - "3307:3306" # mở cổng để xem dữ liệu bằng MySQL Workbench
+
+  backend:
+    environment:
+      NODE_ENV: development # in log [cache] HIT/MISS để quan sát cache
