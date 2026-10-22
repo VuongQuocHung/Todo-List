@@ -36,6 +36,9 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
+      # Chưa có HTTPS → tắt cờ Secure để đăng nhập được khi mở bằng IP LAN.
+      # Khi chạy sau HTTPS thì đặt COOKIE_SECURE=true trong .env
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       DB_HOST: mysql # tên service, không phải localhost
       DB_PORT: 3306
       DB_NAME: ${MYSQL_DATABASE:-todo_app}
