@@ -53,19 +53,30 @@ module.exports.findTodosByUserId = async (userId, {
   const filterCondition = conditions[filterTab];
   // console.log("filterCondition:", filterCondition);
 
-  // Đếm mỗi tab trên toàn bộ kết quả tìm kiếm, không giới hạn theo trang.
-  const stats = {};
-  for (const tab of ['all', 'pending', 'completed', 'overdue']) {
-    const [countRows] = await pool.execute(
-      `select count(*) as total
-      from todos
-      where user_id = ?
-        and title like ?
-        ${conditions[tab]}`,
-      [userId, keywordSearch]
-    );
-    stats[tab] = Number(countRows[0].total);
-  }
+  // Đếm cả 4 tab bằng 1 câu SQL, trên toàn bộ kết quả tìm kiếm (không giới hạn theo trang).
+  // sum(điều kiện): đúng = 1, sai = 0 → cộng lại = số dòng thỏa điều kiện.
+  // coalesce: không có dòng nào thì sum trả null → đổi thành 0.
+  const [countRows] = await pool.execute(
+    `select
+      count(*) as \`all\`,
+      coalesce(sum(completed = false), 0) as pending,
+      coalesce(sum(completed = true), 0) as completed,
+      coalesce(sum(
+        (completed = false and due_date < date(utc_timestamp() + interval 7 hour))
+        or (completed = true and completed_date > due_date)
+      ), 0) as overdue
+    from todos
+    where user_id = ?
+      and title like ?`,
+    [userId, keywordSearch]
+  );
+
+  const stats = {
+    all: Number(countRows[0].all),
+    pending: Number(countRows[0].pending),
+    completed: Number(countRows[0].completed),
+    overdue: Number(countRows[0].overdue),
+  };
   const totalItems = stats[filterTab];
 
   // 2. Lấy công việc của trang hiện tại.

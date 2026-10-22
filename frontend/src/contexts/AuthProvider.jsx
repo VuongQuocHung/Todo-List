@@ -1,5 +1,5 @@
 import { AuthContext } from "./AuthContext";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { request } from '../api/httpClient';
 import { useNavigate } from 'react-router-dom';
 import { UNAUTHORIZED_EVENT } from '../lib/errorHandler';
@@ -14,11 +14,13 @@ export const AuthProvider = ({ children }) => {
 
 
   // Xóa toàn bộ dữ liệu SWR đã cache (không tải lại) → người đăng nhập sau không thấy dữ liệu người trước
-  const clearCache = () => {
+  // useCallback: giữ nguyên tham chiếu hàm giữa các lần render
+  const clearCache = useCallback(() => {
     mutate(() => true, undefined, { 
       revalidate: false 
     });
-  };
+  }, [mutate]);
+
 
   useEffect(() => { // Kiểm tra đăng nhập
     // Effect bị dọn dẹp (unmount / StrictMode chạy lại) → hủy hẳn request cũ
@@ -68,26 +70,32 @@ export const AuthProvider = ({ children }) => {
     return () => {
       window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
     };
-  }, [navigate]);
+  }, [navigate, clearCache]);
 
 
-  const login = (loggedInUser) => {
+  const login = useCallback((loggedInUser) => {
     setUser(loggedInUser);
-  }
+  }, []); // setUser của useState luôn ổn định → không cần deps
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await request('/api/auth/logout', { method: 'POST' }); // lỗi → ApiError, để nơi gọi xử lý
 
     setUser(null);
     clearCache();
-  };
+  }, [clearCache]);
 
+
+  // Chỉ tạo object value mới khi 1 trong 4 giá trị thật sự đổi
+  // các component dùng useContext(AuthContext) không bị render lại vô ích
+  const value = useMemo(
+    () => ({ user, isAuthLoading, login, logout }),
+    [user, isAuthLoading, login, logout]
+  );
 
   return (
-    <AuthContext.Provider 
-      value={{user, isAuthLoading, login, logout}}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
+
 };
