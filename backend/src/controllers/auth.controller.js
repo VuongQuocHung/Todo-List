@@ -58,14 +58,7 @@ module.exports.me = async (req, res, next) => {
   }
 }
 
-module.exports.logoutPost = async (req, res, next) => {
-  try {
-    await authService.logoutUser(req.cookies.token);
-  } catch (error) {
-    // Redis lỗi → vẫn xóa cookie cho người dùng, nhưng ghi log để biết token chưa bị thu hồi
-    console.error('[auth] không thu hồi được token:', error.message);
-  }
-
+module.exports.logoutPost = (req, res) => {
   res.clearCookie('token', cookieOptions);
 
   return res.status(204).send();

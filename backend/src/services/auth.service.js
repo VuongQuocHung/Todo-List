@@ -1,8 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userRepository = require('../repositories/user.repository');
-const crypto = require('crypto');
-const tokenBlacklist = require('../repositories/token-blacklist.repository');
 
 // Lỗi khi đăng ký
 const createEmailExistsError = () => {
@@ -98,7 +96,6 @@ module.exports.loginUser = async ({ email, password }) => {
     process.env.JWT_SECRET,
     {
       expiresIn: '1d',
-      jwtid: crypto.randomUUID(), // mã riêng của token, dùng để thu hồi khi đăng xuất
     }
   );
 
@@ -129,24 +126,3 @@ module.exports.getCurrentUser = async (userId) => {
   return user;
 };
 
-
-module.exports.logoutUser = async (token) => {
-  if (!token) return;
-
-  let payload;
-  try {
-    payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-  } catch (error) {
-    return; // token sai / đã hết hạn thì không cần thu hồi
-  }
-
-  // Token cũ (tạo trước khi có jti) thì không thu hồi được, chỉ chờ hết hạn
-  if (!payload.jti) return;
-
-  // Chỉ cần nằm trong danh sách đen đến lúc token tự hết hạn
-  const ttlSeconds = payload.exp - Math.floor(Date.now() / 1000);
-
-  if (ttlSeconds > 0) {
-    await tokenBlacklist.add(payload.jti, ttlSeconds);
-  }
-};
